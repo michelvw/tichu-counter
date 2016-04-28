@@ -1,0 +1,91 @@
+<!doctype html>
+<html class="no-js" lang="">
+	<head>
+		<meta charset="utf-8">
+		<meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1">
+		<meta name="viewport" content="width=device-width, initial-scale=1">
+
+		<title>Tichu Counter</title>
+		<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/materialize/0.97.6/css/materialize.min.css">
+		<link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
+		<link rel="stylesheet" href="main.css">
+
+
+		<script src="https://code.jquery.com/jquery-2.2.3.min.js"></script>
+		<script src="https://cdnjs.cloudflare.com/ajax/libs/materialize/0.97.6/js/materialize.min.js"></script>
+		<script type="text/javascript" src="script.js"></script>
+	</head>
+	<body>
+		<nav>
+			<div class="nav-wrapper">
+				<ul id="nav-mobile" class="left">
+					<li><a href="#"><i class="material-icons">undo</i></a></li>
+				</ul>
+			</div>
+		</nav>
+		<div class="clear"></div>
+		<div class="row">
+			<div class="col s6">
+				<div class="card" id="A">
+					<div class="card-content">
+						<div class="card-title">Team A</div>
+						<div class="points">0</div>
+						<div class="input-fields">
+							<div class="adding-points">
+								<a href="#" class="minus"><i class="material-icons">remove</i></a>
+								<span class="temp-points">50</span>
+								<a href="#" class="plus"><i class="material-icons">add</i></a>
+							</div>
+							<div class="tichu-modifier">
+								<a class="dropdown-button btn" href="#" data-activates="tichuDropdownA">No Tichu</a>
+								<ul id="tichuDropdownA" class="dropdown-content">
+									<li><a href="#!" data-value="-200">Big Tichu lost</a></li>
+									<li><a href="#!" data-value="-100">Tichu lost</a></li>
+									<li><a href="#!" data-value="0">No Tichu</a></li>
+									<li><a href="#!" data-value="100">Tichu won</a></li>
+									<li><a href="#!" data-value="200">Big Tichu won</a></li>
+								</ul>
+							</div>
+							<div class="double-win">
+								<input type="checkbox" class="filled-in double-win-checkbox" id="doubleWinA" />
+								<label for="doubleWinA">Double Win</label>
+							</div>
+						</div>
+					</div>
+				</div>
+			</div>
+			<div class="col s6">
+				<div class="card" id="B">
+					<div class="card-content">
+						<div class="card-title">Team B</div>
+						<div class="points">0</div>
+						<div class="input-fields">
+							<div class="adding-points">
+								<a href="#" class="minus"><i class="material-icons">remove</i></a>
+								<span class="temp-points">50</span>
+								<a href="#" class="plus"><i class="material-icons">add</i></a>
+							</div>
+							<div class="tichu-modifier">
+								<a class="dropdown-button btn" href="#" data-activates="tichuDropdownB">No Tichu</a>
+								<ul id="tichuDropdownB" class="dropdown-content">
+									<li><a href="#!" data-value="-200">Big Tichu lost</a></li>
+									<li><a href="#!" data-value="-100">Tichu lost</a></li>
+									<li><a href="#!" data-value="0">No Tichu</a></li>
+									<li><a href="#!" data-value="100">Tichu won</a></li>
+									<li><a href="#!" data-value="200">Big Tichu won</a></li>
+								</ul>
+							</div>
+							<div class="double-win">
+								<input type="checkbox" class="filled-in double-win-checkbox" id="doubleWinB" />
+								<label for="doubleWinB">Double Win</label>
+							</div>
+						</div>
+					</div>
+				</div>
+			</div>
+		</div>
+		<div class="container">
+			<a class="waves-effect waves-light btn" id="btn-next">Next Round</a>
+		</div>
+	</body>
+</html>
