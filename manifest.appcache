@@ -1,18 +1,13 @@
+---
+---
 CACHE MANIFEST
-# 2016-05-02-1
+# {{ site.time | date_to_xmlschema }}
 
 CACHE:
-index.html
-main.css
-js/script.js
-js/jquery-2.2.3.min.js
-js/materialize.min.js
-fonts/MaterialIcons-Regular.woff2
-fonts/MaterialIcons-Regular.woff
-fonts/Roboto-Light.woff2
-fonts/Roboto-Light.woff
-fonts/Roboto-Regular.woff2
-fonts/Roboto-Regular.woff
+{% for file in site.static_files %}
+.{{ file.path }}{% endfor %}
+{% for file in site.pages %}
+.{{ file.url }}{% endfor %}
 
 NETWORK:
 *
