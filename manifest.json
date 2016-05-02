@@ -1,0 +1,8 @@
+{
+  "name": "Tichu Counter",
+  "short_name": "Tichu",
+  "description": "A simple app to count points in Tichu",
+  "start_url": "index.html",
+  "display": "standalone",
+  "orientation": "any"
+}
