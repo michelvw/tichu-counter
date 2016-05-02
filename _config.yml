@@ -1,2 +1,4 @@
 gems:
     - jekyll-coffeescript
+sass:
+    style: compressed
