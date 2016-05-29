@@ -1,4 +1,5 @@
 data = {}
+history = []
 
 $ ->
   init()
@@ -30,7 +31,12 @@ $ ->
       data[parentId!='A'].doubleWin = false
     update()
 
+  $('#undo').click ->
+    data = history.pop() if history.length
+    update()
+
   $('#btn-next').click nextRound
+  $('#reset').click init
 
 init = ->
   for t in ['A','B']
@@ -52,6 +58,7 @@ update = ->
     $('#'+t+' .temp-points').text tempPoints
 
 nextRound = ->
+  history.push $.extend(true, {}, data)
   for t in ['A','B']
     data[t=='A'].points += (
       if data[t=='A'].doubleWin then 200 + data[t=='A'].tichuMod
@@ -64,4 +71,4 @@ nextRound = ->
     data[t=='A'].doubleWin = false
     $("a.dropdown-button[data-activates='tichuDropdown" + t + "']").text "No Tichu"
     $('.double-win-checkbox').prop('checked', false)
-    update()
+  update()
