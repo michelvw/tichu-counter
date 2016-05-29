@@ -18,7 +18,7 @@ $ ->
 
   $('.dropdown-content a').click (event) ->
     parentId = $(@).parents('.card').attr('id')
-    $("a.dropdown-button[data-activates='tichuDropdown" + parentId + "']").text $(@).text()
+    data[parentId=='A'].tichuModText = $(@).text()
     data[parentId=='A'].tichuMod = parseInt $(@).attr('data-value')
     update()
 
@@ -26,9 +26,7 @@ $ ->
     parentId = $(@).parents('.card').attr('id')
     checked = $(@).prop('checked')
     data[parentId=='A'].doubleWin = checked
-    if checked
-      $('#' + (if parentId=='A' then 'B' else 'A') + ' .double-win-checkbox').prop('checked', false)
-      data[parentId!='A'].doubleWin = false
+    data[parentId!='A'].doubleWin = false if checked
     update()
 
   $('#undo').click ->
@@ -44,6 +42,7 @@ init = ->
       points: 0
       currentPoints: 50
       tichuMod: 0
+      tichuModText: 'No Tichu'
       doubleWin: false
   update()
 
@@ -56,6 +55,8 @@ update = ->
       else data[t=='A'].currentPoints + data[t=='A'].tichuMod
     )
     $('#'+t+' .temp-points').text tempPoints
+    $("a.dropdown-button[data-activates='tichuDropdown" + t + "']").text data[t=='A'].tichuModText
+    $('#'+t+' .double-win-checkbox').prop('checked', data[t=='A'].doubleWin)
 
 nextRound = ->
   history.push $.extend(true, {}, data)
@@ -68,6 +69,7 @@ nextRound = ->
   for t in ['A','B']
     data[t=='A'].currentPoints = 50
     data[t=='A'].tichuMod = 0
+    data[t=='A'].tichuModText = 'No Tichu'
     data[t=='A'].doubleWin = false
     $("a.dropdown-button[data-activates='tichuDropdown" + t + "']").text "No Tichu"
     $('.double-win-checkbox').prop('checked', false)
