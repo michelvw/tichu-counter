@@ -141,10 +141,17 @@
     const teamAScore = data['A'].points;
     const teamBScore = data['B'].points;
 
-    const teamATichu = data['A'].tichuMod === 200 ? "GT" : data['A'].tichuMod === 100 ? "T" : 
-                       data['A'].tichuMod === -200 ? "<s>GT</s>" : data['A'].tichuMod === -100 ? "<s>T</s>" : "";
-    const teamBTichu = data['B'].tichuMod === 200 ? "GT" : data['B'].tichuMod === 100 ? "T" : 
-                       data['B'].tichuMod === -200 ? "<s>GT</s>" : data['B'].tichuMod === -100 ? "<s>T</s>" : "";
+    const teamATichu = (data['A'].doubleWin ? "⇉ " : "") + 
+                       (data['A'].tichuMod === 200 ? "GT" : 
+                        data['A'].tichuMod === 100 ? "T" : 
+                        data['A'].tichuMod === -200 ? "<s>GT</s>" : 
+                        data['A'].tichuMod === -100 ? "<s>T</s>" : "");
+
+    const teamBTichu = (data['B'].doubleWin ? "⇉ " : "") + 
+                       (data['B'].tichuMod === 200 ? "GT" : 
+                        data['B'].tichuMod === 100 ? "T" : 
+                        data['B'].tichuMod === -200 ? "<s>GT</s>" : 
+                        data['B'].tichuMod === -100 ? "<s>T</s>" : "");
 
     // Save scores and Tichu status for the current round
     roundScores.push({ 
