@@ -19,19 +19,23 @@
 
       /* Reddish background for Team A */
       #team-a-header,
+      #team-a-total-points-label,
       #team-a-points-label,
       #team-a-tichu-label,
       td:nth-child(2),
-      td:nth-child(3) {
+      td:nth-child(3),
+      td:nth-child(4) {
         background-color: rgba(255, 99, 132, 0.2); /* Light red */
       }
 
       /* Bluish background for Team B */
       #team-b-header,
+      #team-b-total-points-label,
       #team-b-points-label,
       #team-b-tichu-label,
-      td:nth-child(4),
-      td:nth-child(5) {
+      td:nth-child(5),
+      td:nth-child(6),
+      td:nth-child(7) {
         background-color: rgba(54, 162, 235, 0.2); /* Light blue */
       }
 
@@ -61,30 +65,23 @@
               <!-- Top row with merged columns -->
               <tr>
                 <th></th>
-                <th colspan="2" id="team-a-header">Team A</th>
-                <th colspan="2" id="team-b-header">Team B</th>
+                <th colspan="3" id="team-a-header">Team A</th>
+                <th colspan="3" id="team-b-header">Team B</th>
               </tr>
               <!-- Second row with individual columns -->
               <tr>
                 <th>Round</th>
-                <th id="team-a-points-label">Points</th>
+                <th id="team-a-total-points-label">Total</th>
+                <th id="team-a-points-label">Round</th>
                 <th id="team-a-tichu-label">Tichu</th>
-                <th id="team-b-points-label">Points</th>
+                <th id="team-b-total-points-label">Total</th>
+                <th id="team-b-points-label">Round</th>
                 <th id="team-b-tichu-label">Tichu</th>
               </tr>
             </thead>
             <tbody>
               <!-- Scores will be dynamically added here -->
             </tbody>
-            <tfoot>
-              <tr>
-                <td><strong>Total</strong></td>
-                <td id="total-team-a">0</td>
-                <td></td>
-                <td id="total-team-b">0</td>
-                <td></td>
-              </tr>
-            </tfoot>
           </table>
         </div>
 
@@ -108,9 +105,6 @@
       const roundScores = JSON.parse(localStorage.getItem("roundScores")) || [];
       const tableBody = document.querySelector("#round-scores tbody");
 
-      let totalTeamA = 0;
-      let totalTeamB = 0;
-
       // Data for the graph
       const labels = []; // Round numbers
       const teamAData = []; // Team A scores
@@ -118,30 +112,28 @@
 
       // Populate the table with round scores
       roundScores.forEach((round, index) => {
+        // Calculate points for the current round
+        const teamAPoints = index === 0 ? round.teamA : round.teamA - roundScores[index - 1].teamA;
+        const teamBPoints = index === 0 ? round.teamB : round.teamB - roundScores[index - 1].teamB;
+
         const row = `
           <tr>
             <td>${index + 1}</td>
-            <td>${round.teamA}</td>
+            <td>${round.teamA}</td> <!-- Total Points for Team A -->
+            <td>${teamAPoints}</td> <!-- Points for Team A -->
             <td>${round.teamATichu}</td>
-            <td>${round.teamB}</td>
+            <td>${round.teamB}</td> <!-- Total Points for Team B -->
+            <td>${teamBPoints}</td> <!-- Points for Team B -->
             <td>${round.teamBTichu}</td>
           </tr>
         `;
         tableBody.innerHTML += row;
-
-        // Add to totals
-        totalTeamA += round.teamA;
-        totalTeamB += round.teamB;
 
         // Add data for the graph
         labels.push(`Round ${index + 1}`);
         teamAData.push(round.teamA);
         teamBData.push(round.teamB);
       });
-
-      // Update totals in the footer
-      document.getElementById("total-team-a").textContent = totalTeamA;
-      document.getElementById("total-team-b").textContent = totalTeamB;
 
       // Create the graph
       const ctx = document.getElementById("scoreChart").getContext("2d");
