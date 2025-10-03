@@ -3,6 +3,6 @@
   "short_name": "Tichu",
   "description": "A simple app to count points in Tichu",
   "start_url": "index.html",
-  "display": "fullscreen",
+  "display": "standalone",
   "orientation": "any"
 }
