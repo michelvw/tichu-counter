@@ -1,0 +1,221 @@
+<!doctype html>
+<html class="no-js" lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Round Scores</title>
+    <link rel="stylesheet" href="main.css">
+    <script src="js/jquery-2.2.3.min.js"></script>
+    <script src="js/materialize.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script> <!-- Include Chart.js -->
+    <style>
+      .hidden {
+        display: none;
+      }
+      
+      #team-a-header, #team-b-header {
+        text-align: center;
+      }
+
+      /* Reddish background for Team A */
+      #team-a-header,
+      #team-a-points-label,
+      #team-a-tichu-label,
+      td:nth-child(2),
+      td:nth-child(3) {
+        background-color: rgba(255, 99, 132, 0.2); /* Light red */
+      }
+
+      /* Bluish background for Team B */
+      #team-b-header,
+      #team-b-points-label,
+      #team-b-tichu-label,
+      td:nth-child(4),
+      td:nth-child(5) {
+        background-color: rgba(54, 162, 235, 0.2); /* Light blue */
+      }
+
+      /* Optional: Add padding for better readability */
+      th,
+      td {
+        padding: 10px;
+      }
+    </style>
+  </head>
+  <body>
+    <nav>
+      <div class="nav-wrapper">
+        <a href="#" class="brand-logo center">ROUND SCORES</a>
+        <ul id="nav-mobile" class="left">
+          <li><a href="index.html" id="back"><i class="material-icons">arrow_back</i></a></li>
+          <li><a href="#" id="toggle-view"><i class="material-icons">show_chart</i></a></li>
+        </ul>
+      </div>
+    </nav>
+    <div class="container">
+      <div class="row">
+        <!-- Table -->
+        <div class="" id="table-container">
+          <table id="round-scores" class="striped">
+            <thead>
+              <!-- Top row with merged columns -->
+              <tr>
+                <th></th>
+                <th colspan="2" id="team-a-header">Team A</th>
+                <th colspan="2" id="team-b-header">Team B</th>
+              </tr>
+              <!-- Second row with individual columns -->
+              <tr>
+                <th>Round</th>
+                <th id="team-a-points-label">Points</th>
+                <th id="team-a-tichu-label">Tichu</th>
+                <th id="team-b-points-label">Points</th>
+                <th id="team-b-tichu-label">Tichu</th>
+              </tr>
+            </thead>
+            <tbody>
+              <!-- Scores will be dynamically added here -->
+            </tbody>
+            <tfoot>
+              <tr>
+                <td><strong>Total</strong></td>
+                <td id="total-team-a">0</td>
+                <td></td>
+                <td id="total-team-b">0</td>
+                <td></td>
+              </tr>
+            </tfoot>
+          </table>
+        </div>
+
+        <!-- Graph -->
+        <div class="hidden" id="graph-container">
+          <canvas id="scoreChart"></canvas> <!-- Canvas for the graph -->
+        </div>
+      </div>
+    </div>
+
+    <script>
+      // Retrieve team names from localStorage
+      const teamAName = localStorage.getItem("teamAName") || "Team A";
+      const teamBName = localStorage.getItem("teamBName") || "Team B";
+
+      // Update table headers and labels with team names
+      document.getElementById("team-a-header").textContent = teamAName;
+      document.getElementById("team-b-header").textContent = teamBName;
+
+      // Load round scores from localStorage
+      const roundScores = JSON.parse(localStorage.getItem("roundScores")) || [];
+      const tableBody = document.querySelector("#round-scores tbody");
+
+      let totalTeamA = 0;
+      let totalTeamB = 0;
+
+      // Data for the graph
+      const labels = []; // Round numbers
+      const teamAData = []; // Team A scores
+      const teamBData = []; // Team B scores
+
+      // Populate the table with round scores
+      roundScores.forEach((round, index) => {
+        const row = `
+          <tr>
+            <td>${index + 1}</td>
+            <td>${round.teamA}</td>
+            <td>${round.teamATichu}</td>
+            <td>${round.teamB}</td>
+            <td>${round.teamBTichu}</td>
+          </tr>
+        `;
+        tableBody.innerHTML += row;
+
+        // Add to totals
+        totalTeamA += round.teamA;
+        totalTeamB += round.teamB;
+
+        // Add data for the graph
+        labels.push(`Round ${index + 1}`);
+        teamAData.push(round.teamA);
+        teamBData.push(round.teamB);
+      });
+
+      // Update totals in the footer
+      document.getElementById("total-team-a").textContent = totalTeamA;
+      document.getElementById("total-team-b").textContent = totalTeamB;
+
+      // Create the graph
+      const ctx = document.getElementById("scoreChart").getContext("2d");
+      Chart.defaults.font.family = "sans-serif";
+      Chart.defaults.font.weight = "bolder";
+      Chart.defaults.font.size = 16;
+      const scoreChart = new Chart(ctx, {
+        type: "line", // Line chart
+        data: {
+          labels: labels, // Round numbers
+          datasets: [
+            {
+              label: teamAName,
+              data: teamAData,
+              borderColor: "rgba(255, 99, 132, 1)", // Red line
+              backgroundColor: "rgba(255, 99, 132, 0.2)", // Light red fill
+              borderWidth: 2,
+              fill: true,
+            },
+            {
+              label: teamBName,
+              data: teamBData,
+              borderColor: "rgba(54, 162, 235, 1)", // Blue line
+              backgroundColor: "rgba(54, 162, 235, 0.2)", // Light blue fill
+              borderWidth: 2,
+              fill: true,
+            },
+          ],
+        },
+        options: {
+          responsive: true,
+          plugins: {
+            legend: {
+              position: "top",
+            },
+            title: {
+              display: true,
+              text: "Scores Over Rounds",
+            },
+          },
+          scales: {
+            x: {
+              title: {
+                display: true,
+                text: "Rounds",
+              },
+            },
+            y: {
+              beginAtZero: true,
+              title: {
+                display: true,
+                text: "Points",
+              },
+            },
+          },
+        },
+      });
+
+      // Toggle between table and graph
+      const toggleButton = document.getElementById("toggle-view");
+      const tableContainer = document.getElementById("table-container");
+      const graphContainer = document.getElementById("graph-container");
+
+      toggleButton.addEventListener("click", () => {
+        if (tableContainer.classList.contains("hidden")) {
+          tableContainer.classList.remove("hidden");
+          graphContainer.classList.add("hidden");
+          toggleButton.innerHTML = '<i class="material-icons">show_chart</i>';
+        } else {
+          tableContainer.classList.add("hidden");
+          graphContainer.classList.remove("hidden");
+          toggleButton.innerHTML = '<i class="material-icons">list</i>';
+        }
+      });
+    </script>
+  </body>
+</html>

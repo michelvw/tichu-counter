@@ -7,41 +7,41 @@
   $(function() {
     init();
 
-    // punten toekennen
+    // Assign points
     $('.adding-points .minus').click(function() {
       var parentId = $(this).parents('.card').attr('id');
-      data[parentId === 'A'].currentPoints = data[parentId === 'A'].currentPoints <= -25 ? -25 : data[parentId === 'A'].currentPoints - 5;
-      data[parentId !== 'A'].currentPoints = data[parentId !== 'A'].currentPoints >= 125 ? 125 : data[parentId !== 'A'].currentPoints + 5;
+      data[parentId].currentPoints = data[parentId].currentPoints <= -25 ? -25 : data[parentId].currentPoints - 5;
+      data[parentId === 'A' ? 'B' : 'A'].currentPoints = data[parentId === 'A' ? 'B' : 'A'].currentPoints >= 125 ? 125 : data[parentId === 'A' ? 'B' : 'A'].currentPoints + 5;
       return update();
     });
 
     $('.adding-points .plus').click(function() {
       var parentId = $(this).parents('.card').attr('id');
-      data[parentId === 'A'].currentPoints = data[parentId === 'A'].currentPoints >= 125 ? 125 : data[parentId === 'A'].currentPoints + 5;
-      data[parentId !== 'A'].currentPoints = data[parentId !== 'A'].currentPoints <= -25 ? -25 : data[parentId !== 'A'].currentPoints - 5;
+      data[parentId].currentPoints = data[parentId].currentPoints >= 125 ? 125 : data[parentId].currentPoints + 5;
+      data[parentId === 'A' ? 'B' : 'A'].currentPoints = data[parentId === 'A' ? 'B' : 'A'].currentPoints <= -25 ? -25 : data[parentId === 'A' ? 'B' : 'A'].currentPoints - 5;
       return update();
     });
 
-    // tichu dropdown
+    // Tichu dropdown
     $('.dropdown-content a').click(function() {
       var parentId = $(this).parents('.card').attr('id');
-      data[parentId === 'A'].tichuModText = $(this).text();
-      data[parentId === 'A'].tichuMod = parseInt($(this).attr('data-value'));
+      data[parentId].tichuModText = $(this).text();
+      data[parentId].tichuMod = parseInt($(this).attr('data-value'));
       return update();
     });
 
-    // double win
+    // Double win
     $('.double-win-checkbox').click(function() {
       var parentId = $(this).parents('.card').attr('id');
       var checked = $(this).prop('checked');
-      data[parentId === 'A'].doubleWin = checked;
+      data[parentId].doubleWin = checked;
       if (checked) {
-        data[parentId !== 'A'].doubleWin = false;
+        data[parentId === 'A' ? 'B' : 'A'].doubleWin = false;
       }
       return update();
     });
 
-    // undo & reset
+    // Undo & reset
     $('#undo').click(function() {
       if (history.length) {
         data = history.pop();
@@ -49,9 +49,37 @@
       return update();
     });
     $('#btn-next').click(nextRound);
-    $('#reset').click(init);
+   
+    $('#reset').click(function() {
+      // Clear the data object
+      init();
 
-    // team name inputs -> opslaan in localStorage
+      // Clear the roundScores array in localStorage
+      localStorage.removeItem("roundScores");
+      console.log("Round scores reset.");
+
+      // Reset totals in localStorage
+      localStorage.setItem("A_points", 0);
+      localStorage.setItem("B_points", 0);
+      // Update the data object to reflect the reset totals
+      data['A'].points = 0;
+      data['B'].points = 0;
+      // Reset points displayed on the game page
+      $('#A .points').text(0);
+      $('#B .points').text(0);
+      console.log("Totals reset to 0.");
+
+      //clear the scores table on the round-scores.html page if it's open
+      const tableBody = document.querySelector("#round-scores tbody");
+      if (tableBody) {
+        tableBody.innerHTML = ""; // Clear the table rows
+      }
+
+      // Update the UI to reflect the reset totals
+      update();
+    });
+
+    // Team name inputs -> save in localStorage
     $("#teamAName").on("input", function() {
       localStorage.setItem("teamAName", $(this).val());
     });
@@ -61,57 +89,99 @@
   });
 
   init = function() {
-    var ref = ['A', 'B'];
-    for (var i = 0; i < ref.length; i++) {
-      var t = ref[i];
-      data[t === 'A'] = {
-        points: 0,
-        currentPoints: 50,
-        tichuMod: 0,
-        tichuModText: 'No Tichu',
-        doubleWin: false
-      };
-    }
+  var ref = ['A', 'B'];
+  for (var i = 0; i < ref.length; i++) {
+    var t = ref[i];
+    data[t] = {
+      points: parseInt(localStorage.getItem(`${t}_points`)) || 0, // Restore points from localStorage
+      currentPoints: 50,
+      tichuMod: 0,
+      tichuModText: 'No Tichu',
+      doubleWin: false
+    };
+  }
 
-    // Zet teamnamen vanuit localStorage of defaults
-    $("#teamAName").val(localStorage.getItem("teamAName") || "Team A");
-    $("#teamBName").val(localStorage.getItem("teamBName") || "Team B");
+  // Set team names from localStorage or defaults
+  $("#teamAName").val(localStorage.getItem("teamAName") || "Team A");
+  $("#teamBName").val(localStorage.getItem("teamBName") || "Team B");
 
-    return update();
-  };
+  return update();
+};
 
   update = function() {
     var ref = ['A', 'B'];
     for (var i = 0; i < ref.length; i++) {
       var t = ref[i];
-      $('#' + t + ' .points').text(data[t === 'A'].points);
-      var tempPoints = (data[t === 'A'].doubleWin ? 200 + data[t === 'A'].tichuMod : data[t !== 'A'].doubleWin ? data[t === 'A'].tichuMod : data[t === 'A'].currentPoints + data[t === 'A'].tichuMod);
+      $('#' + t + ' .points').text(data[t].points);
+      var tempPoints = (data[t].doubleWin ? 200 + data[t].tichuMod : 
+                        data[ref[1 - i]].doubleWin ? data[t].tichuMod : 
+                        data[t].currentPoints + data[t].tichuMod);
       $('#' + t + ' .temp-points').text(tempPoints);
-      $("a.dropdown-button[data-activates='tichuDropdown" + t + "']").text(data[t === 'A'].tichuModText);
-      $('#' + t + ' .double-win-checkbox').prop('checked', data[t === 'A'].doubleWin);
+      $("a.dropdown-button[data-activates='tichuDropdown" + t + "']").text(data[t].tichuModText);
+      $('#' + t + ' .double-win-checkbox').prop('checked', data[t].doubleWin);
     }
   };
 
   nextRound = function() {
     history.push($.extend(true, {}, data));
-    var ref = ['A', 'B'];
-    for (var i = 0; i < ref.length; i++) {
-      var t = ref[i];
-      data[t === 'A'].points += (data[t === 'A'].doubleWin ? 200 + data[t === 'A'].tichuMod : data[t !== 'A'].doubleWin ? data[t === 'A'].tichuMod : data[t === 'A'].currentPoints + data[t === 'A'].tichuMod);
+    let ref = ['A', 'B'];
+
+    // Update totals for each team first
+    for (let i = 0; i < ref.length; i++) {
+      let t = ref[i];
+      data[t].points += (data[t].doubleWin ? 200 + data[t].tichuMod : 
+                         data[ref[1 - i]].doubleWin ? data[t].tichuMod : 
+                         data[t].currentPoints + data[t].tichuMod);
     }
-    for (var j = 0; j < ref.length; j++) {
-      var t2 = ref[j];
-      data[t2 === 'A'].currentPoints = 50;
-      data[t2 === 'A'].tichuMod = 0;
-      data[t2 === 'A'].tichuModText = 'No Tichu';
-      data[t2 === 'A'].doubleWin = false;
+
+    // Array to store scores for each round
+    let roundScores = JSON.parse(localStorage.getItem("roundScores")) || [];
+
+    // Get updated scores and Tichu status
+    const teamAScore = data['A'].points;
+    const teamBScore = data['B'].points;
+
+    const teamATichu = data['A'].tichuMod === 200 ? "GT" : data['A'].tichuMod === 100 ? "T" : 
+                       data['A'].tichuMod === -200 ? "<s>GT</s>" : data['A'].tichuMod === -100 ? "<s>T</s>" : "";
+    const teamBTichu = data['B'].tichuMod === 200 ? "GT" : data['B'].tichuMod === 100 ? "T" : 
+                       data['B'].tichuMod === -200 ? "<s>GT</s>" : data['B'].tichuMod === -100 ? "<s>T</s>" : "";
+
+    // Save scores and Tichu status for the current round
+    roundScores.push({ 
+      teamA: teamAScore, 
+      teamB: teamBScore, 
+      teamATichu: teamATichu, 
+      teamBTichu: teamBTichu 
+    });
+
+    console.log("Round scores saved:", roundScores);
+
+    // Save to localStorage
+    localStorage.setItem("roundScores", JSON.stringify(roundScores));
+
+    // Save updated totals to localStorage
+    localStorage.setItem("A_points", data['A'].points);
+    localStorage.setItem("B_points", data['B'].points);
+    console.log("Updated totals saved to localStorage:", data['A'].points, data['B'].points);
+
+    // Reset temporary points for the next round
+    $(".temp-points").text("0");
+
+    // Reset other values for the next round
+    for (let j = 0; j < ref.length; j++) {
+      let t2 = ref[j];
+      data[t2].currentPoints = 50;
+      data[t2].tichuMod = 0;
+      data[t2].tichuModText = 'No Tichu';
+      data[t2].doubleWin = false;
       $("a.dropdown-button[data-activates='tichuDropdown" + t2 + "']").text("No Tichu");
       $('.double-win-checkbox').prop('checked', false);
     }
+
     return update();
   };
 
-  // touch scroll fix
+  // Touch scroll fix
   $(function() {
     var initialY = null;
     var previousY = null;
@@ -134,4 +204,10 @@
     });
   });
 
+  // Save scores to localStorage before navigating to round-scores.html
+  $('#btn-round-scores').click(function() {
+    localStorage.setItem("A_points", data['A'].points);
+    localStorage.setItem("B_points", data['B'].points);
+    console.log("Scores saved to localStorage:", data['A'].points, data['B'].points);
+  });
 }).call(this);
