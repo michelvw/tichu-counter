@@ -1,4 +1,5 @@
 {
+  "id": "tichu-counter",
   "name": "Tichu Counter",
   "short_name": "Tichu",  
   "description": "A simple app to count points in Tichu",
