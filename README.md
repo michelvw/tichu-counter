@@ -5,3 +5,5 @@ Simple tichu counter app, forked from benikr with added features:
 Technical changes:
 - Changed coffee for pure javascript
 - Updated meta tags and manifest to make installable PWA (including iconset)
+
+Use here: https://michelvw.github.io/tichu-counter/
