@@ -24,6 +24,7 @@
     <script src="js/jquery-2.2.3.min.js"></script>
     <script src="js/materialize.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script> <!-- Include Chart.js -->
+    <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2"></script> <!-- On-chart labels -->
 
     <style>
       /* The canvas needs a wrapper with an explicit, non-flex size to
@@ -131,8 +132,20 @@
 
       // Data for the graph
       const labels = []; // Round numbers
-      const teamAData = []; // Team A scores
-      const teamBData = []; // Team B scores
+      const teamAData = []; // Team A cumulative totals
+      const teamBData = []; // Team B cumulative totals
+      const teamADelta = []; // Team A round points (this round's gain/loss)
+      const teamBDelta = []; // Team B round points
+      const teamATichuCodes = []; // Team A Tichu badge text, plain (no HTML)
+      const teamBTichuCodes = []; // Team B Tichu badge text, plain (no HTML)
+
+      // The table stores Tichu results as small HTML snippets (e.g. with
+      // <s> for a lost call). Canvas text can't render HTML, so convert
+      // to a plain-text equivalent for the chart labels.
+      function tichuPlainCode(html) {
+        if (!html) return "";
+        return html.replace("<s>GT</s>", "✗GT").replace("<s>T</s>", "✗T");
+      }
 
       // Populate the table with round scores
       roundScores.forEach((round, index) => {
@@ -157,6 +170,10 @@
         labels.push(`${index + 1}`);
         teamAData.push(round.teamA);
         teamBData.push(round.teamB);
+        teamADelta.push(teamAPoints);
+        teamBDelta.push(teamBPoints);
+        teamATichuCodes.push(tichuPlainCode(round.teamATichu));
+        teamBTichuCodes.push(tichuPlainCode(round.teamBTichu));
       });
 
       // --- Auto-scale the Y axis to the actual score range ---
@@ -177,6 +194,16 @@
         yMax = Math.ceil((rawMax + padding) / 10) * 10;
       }
 
+      // Build the multi-line label shown at each point: total, round
+      // delta (with sign), and the Tichu code if one was called.
+      function buildPointLabel(total, delta, tichuCode) {
+        const lines = [`${total}`, delta >= 0 ? `+${delta}` : `${delta}`];
+        if (tichuCode) lines.push(tichuCode);
+        return lines;
+      }
+
+      Chart.register(ChartDataLabels);
+
       // Create the graph
       const ctx = document.getElementById("scoreChart").getContext("2d");
       Chart.defaults.font.family = "sans-serif";
@@ -194,6 +221,19 @@
               backgroundColor: "rgba(255, 99, 132, 0.2)", // Light red fill
               borderWidth: 2,
               fill: true,
+              pointRadius: 3,
+              pointHoverRadius: 5,
+              datalabels: {
+                align: "top",
+                anchor: "end",
+                color: "rgba(200, 50, 80, 1)",
+                font: { size: 9, weight: "bold" },
+                backgroundColor: "rgba(255, 255, 255, 0.85)",
+                borderRadius: 4,
+                padding: { top: 2, bottom: 2, left: 4, right: 4 },
+                formatter: (value, dctx) =>
+                  buildPointLabel(teamAData[dctx.dataIndex], teamADelta[dctx.dataIndex], teamATichuCodes[dctx.dataIndex]),
+              },
             },
             {
               label: teamBName,
@@ -202,12 +242,28 @@
               backgroundColor: "rgba(54, 162, 235, 0.2)", // Light blue fill
               borderWidth: 2,
               fill: true,
+              pointRadius: 3,
+              pointHoverRadius: 5,
+              datalabels: {
+                align: "bottom",
+                anchor: "end",
+                color: "rgba(30, 110, 180, 1)",
+                font: { size: 9, weight: "bold" },
+                backgroundColor: "rgba(255, 255, 255, 0.85)",
+                borderRadius: 4,
+                padding: { top: 2, bottom: 2, left: 4, right: 4 },
+                formatter: (value, dctx) =>
+                  buildPointLabel(teamBData[dctx.dataIndex], teamBDelta[dctx.dataIndex], teamBTichuCodes[dctx.dataIndex]),
+              },
             },
           ],
         },
         options: {
           responsive: true,
           maintainAspectRatio: false,
+          layout: {
+            padding: { top: 24, bottom: 24 },
+          },
           plugins: {
             legend: {
               position: "top",
