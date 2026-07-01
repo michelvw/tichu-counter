@@ -202,6 +202,23 @@
         return lines;
       }
 
+      // Fixed "A above, B below" alignment overlaps whenever the lines
+      // are close together or cross. Instead, push whichever team is
+      // higher at that round's point further up, and whichever is lower
+      // further down, so the two chips always diverge away from each
+      // other rather than both crowding into the same gap. Ties fall
+      // back to team A on top so they don't land on the same side.
+      function makeAlignFn(isTeamA) {
+        return (dctx) => {
+          const idx = dctx.dataIndex;
+          const aVal = teamAData[idx];
+          const bVal = teamBData[idx];
+          if (aVal === bVal) return isTeamA ? "top" : "bottom";
+          const teamIsHigher = isTeamA ? aVal > bVal : bVal > aVal;
+          return teamIsHigher ? "top" : "bottom";
+        };
+      }
+
       Chart.register(ChartDataLabels);
 
       // Create the graph
@@ -224,8 +241,9 @@
               pointRadius: 3,
               pointHoverRadius: 5,
               datalabels: {
-                align: "top",
-                anchor: "end",
+                align: makeAlignFn(true),
+                anchor: "center",
+                offset: 6,
                 color: "rgba(200, 50, 80, 1)",
                 font: { size: 9, weight: "bold" },
                 backgroundColor: "rgba(255, 255, 255, 0.85)",
@@ -245,8 +263,9 @@
               pointRadius: 3,
               pointHoverRadius: 5,
               datalabels: {
-                align: "bottom",
-                anchor: "end",
+                align: makeAlignFn(false),
+                anchor: "center",
+                offset: 6,
                 color: "rgba(30, 110, 180, 1)",
                 font: { size: 9, weight: "bold" },
                 backgroundColor: "rgba(255, 255, 255, 0.85)",
