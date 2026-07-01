@@ -76,6 +76,7 @@
         <ul id="nav-mobile" class="left">
           <li><a href="index.html" id="back"><i class="material-icons">arrow_back</i></a></li>
           <li><a href="#" id="toggle-view"><i class="material-icons">show_chart</i></a></li>
+          <li><a href="#" id="toggle-chips"><i class="material-icons">visibility</i></a></li>
         </ul>
       </div>
     </nav>
@@ -219,6 +220,10 @@
         };
       }
 
+      // Whether to show the on-chart total/delta/Tichu chips, persisted
+      // across visits.
+      let chipsVisible = localStorage.getItem("chipsVisible") !== "false";
+
       Chart.register(ChartDataLabels);
 
       // Create the graph
@@ -291,6 +296,9 @@
               display: true,
               text: "Tichu Scores",
             },
+            datalabels: {
+              display: chipsVisible,
+            },
           },
           elements: {
             line: {
@@ -351,6 +359,21 @@
       });
 
       syncLandscapeClass();
+
+      // Toggle the on-chart total/delta/Tichu chips on and off
+      const chipsToggleButton = document.getElementById("toggle-chips");
+      function updateChipsIcon() {
+        chipsToggleButton.innerHTML =
+          `<i class="material-icons">${chipsVisible ? "visibility" : "visibility_off"}</i>`;
+      }
+      chipsToggleButton.addEventListener("click", () => {
+        chipsVisible = !chipsVisible;
+        localStorage.setItem("chipsVisible", chipsVisible);
+        scoreChart.options.plugins.datalabels.display = chipsVisible;
+        scoreChart.update();
+        updateChipsIcon();
+      });
+      updateChipsIcon();
     </script>
   </body>
 </html>
