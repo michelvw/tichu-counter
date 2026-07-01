@@ -1,12 +1,12 @@
 {
   "id": "tichu-counter",
   "name": "Tichu Counter",
-  "short_name": "Tichu",  
+  "short_name": "Tichu",
   "description": "A simple app to count points in Tichu",
   "start_url": "index.html",
   "display": "standalone",
   "orientation": "any",
-   "icons": [
+  "icons": [
     {
       "src": "icons/windows11/SmallTile.scale-100.png",
       "sizes": "71x71"
@@ -455,5 +455,15 @@
       "src": "icons/ios/1024.png",
       "sizes": "1024x1024"
     }
+  ],
+  "theme_color": "#ec7375",
+  "background_color": "#ffffff",
+  "screenshots" : [
+  {
+    "src": "screenshots/screenshot.jpg",
+    "sizes": "1280x720",
+    "type": "image/jpg",
+    "platform": "wide"
+  }
   ]
 }

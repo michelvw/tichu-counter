@@ -25,6 +25,45 @@
     <script src="js/materialize.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script> <!-- Include Chart.js -->
 
+    <style>
+      /* Fullscreen graph mode: covers the viewport so the chart can use
+         all available space (landscape rotation or manual toggle). */
+      #graph-container.fullscreen {
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100vw;
+        height: 100vh;
+        margin: 0;
+        padding: 12px;
+        box-sizing: border-box;
+        background-color: #ffffff;
+        z-index: 9999;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+      }
+      #graph-container.fullscreen canvas {
+        max-height: 100%;
+        max-width: 100%;
+      }
+      #exit-fullscreen {
+        display: none;
+        position: fixed;
+        top: 10px;
+        right: 10px;
+        z-index: 10000;
+        background-color: rgba(0, 0, 0, 0.6);
+        color: #fff;
+        border-radius: 50%;
+        width: 40px;
+        height: 40px;
+        line-height: 40px;
+        text-align: center;
+        cursor: pointer;
+      }
+    </style>
+
   </head>
   <body>
     <nav>
@@ -33,6 +72,7 @@
         <ul id="nav-mobile" class="left">
           <li><a href="index.html" id="back"><i class="material-icons">arrow_back</i></a></li>
           <li><a href="#" id="toggle-view"><i class="material-icons">show_chart</i></a></li>
+          <li><a href="#" id="fullscreen-toggle"><i class="material-icons">fullscreen</i></a></li>
         </ul>
       </div>
     </nav>
@@ -71,6 +111,9 @@
         </div>
       </div>
     </div>
+
+    <!-- Visible only while the graph is in fullscreen mode -->
+    <div id="exit-fullscreen"><i class="material-icons">close</i></div>
 
     <script>
       // Retrieve team names from localStorage
@@ -115,6 +158,24 @@
         teamBData.push(round.teamB);
       });
 
+      // --- Auto-scale the Y axis to the actual score range ---
+      // Instead of forcing the axis to start at 0 (which wastes space and
+      // squashes the two lines together when scores are e.g. -120..340),
+      // scale to the real min/max of the data with a bit of padding.
+      const allScores = [...teamAData, ...teamBData];
+      let yMin = 0;
+      let yMax = 100;
+      if (allScores.length) {
+        const rawMin = Math.min(...allScores);
+        const rawMax = Math.max(...allScores);
+        const range = rawMax - rawMin;
+        // Padding: 15% of the range, but never less than 30 points so a
+        // single round (range = 0) still gets a sensible axis.
+        const padding = Math.max(30, Math.round(range * 0.15));
+        yMin = Math.floor((rawMin - padding) / 10) * 10;
+        yMax = Math.ceil((rawMax + padding) / 10) * 10;
+      }
+
       // Create the graph
       const ctx = document.getElementById("scoreChart").getContext("2d");
       Chart.defaults.font.family = "sans-serif";
@@ -145,6 +206,7 @@
         },
         options: {
           responsive: true,
+          maintainAspectRatio: false,
           plugins: {
             legend: {
               position: "top",
@@ -167,7 +229,9 @@
               },
             },
             y: {
-              beginAtZero: true,
+              beginAtZero: false,
+              min: yMin,
+              max: yMax,
               title: {
                 display: true,
                 text: "Points",
@@ -181,18 +245,61 @@
       const toggleButton = document.getElementById("toggle-view");
       const tableContainer = document.getElementById("table-container");
       const graphContainer = document.getElementById("graph-container");
+      const fullscreenButton = document.getElementById("fullscreen-toggle");
+      const exitFullscreenButton = document.getElementById("exit-fullscreen");
+
+      function isGraphActive() {
+        return !graphContainer.classList.contains("hidden");
+      }
+
+      function setFullscreen(on) {
+        if (on && isGraphActive()) {
+          graphContainer.classList.add("fullscreen");
+          exitFullscreenButton.style.display = "block";
+        } else {
+          graphContainer.classList.remove("fullscreen");
+          exitFullscreenButton.style.display = "none";
+        }
+        // Give the layout a tick to settle, then resize the chart to fill
+        // whatever space it now has.
+        setTimeout(() => scoreChart.resize(), 50);
+      }
 
       toggleButton.addEventListener("click", () => {
         if (tableContainer.classList.contains("hidden")) {
           tableContainer.classList.remove("hidden");
           graphContainer.classList.add("hidden");
           toggleButton.innerHTML = '<i class="material-icons">show_chart</i>';
+          setFullscreen(false);
         } else {
           tableContainer.classList.add("hidden");
           graphContainer.classList.remove("hidden");
           toggleButton.innerHTML = '<i class="material-icons">list</i>';
+          setTimeout(() => scoreChart.resize(), 50);
         }
       });
+
+      // Manual fullscreen toggle button
+      fullscreenButton.addEventListener("click", () => {
+        setFullscreen(!graphContainer.classList.contains("fullscreen"));
+      });
+      exitFullscreenButton.addEventListener("click", () => setFullscreen(false));
+
+      // Auto-fullscreen the graph when the phone is rotated to landscape
+      // (and back to normal size when rotated back to portrait), but only
+      // while the graph view is the active one.
+      const landscapeQuery = window.matchMedia("(orientation: landscape)");
+      function handleOrientationChange(e) {
+        if (!isGraphActive()) return;
+        setFullscreen(e.matches);
+      }
+      landscapeQuery.addEventListener("change", handleOrientationChange);
+
+      // If the page loads already in landscape with the graph active,
+      // reflect that immediately.
+      if (landscapeQuery.matches) {
+        setFullscreen(isGraphActive());
+      }
     </script>
   </body>
 </html>
