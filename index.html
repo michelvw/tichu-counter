@@ -29,14 +29,38 @@
   <body>
     <nav>
       <div class="nav-wrapper">
-        <a href="#" class="brand-logo center"></a>
+        <a href="#" class="brand-logo center" id="round-counter">Round 1</a>
         <ul id="nav-mobile" class="left">
           <li><a href="#" id="undo"><i class="material-icons">undo</i></a></li>
           <li><a href="#" id="reset"><i class="material-icons">cached</i></a></li>
           <li><a href="round-scores.html" id="round-scores"><i class="material-icons">list</i></a></li>
         </ul>
+        <ul id="nav-mobile-right" class="right">
+          <li>
+            <a class="dropdown-button" href="#" id="win-threshold-button" data-activates="winThresholdDropdown">Win: 500</a>
+            <ul id="winThresholdDropdown" class="dropdown-content">
+              <li><a href="#!" class="win-threshold-option" data-value="300">300</a></li>
+              <li><a href="#!" class="win-threshold-option" data-value="500">500</a></li>
+              <li><a href="#!" class="win-threshold-option" data-value="750">750</a></li>
+              <li><a href="#!" class="win-threshold-option" data-value="1000">1000</a></li>
+              <li class="divider"></li>
+              <li>
+                <div class="custom-threshold">
+                  <input type="number" id="customWinThreshold" inputmode="numeric" min="50" step="50" placeholder="Custom..." />
+                </div>
+              </li>
+            </ul>
+          </li>
+        </ul>
       </div>
     </nav>
+
+    <!-- Shown when a team's total crosses the win threshold -->
+    <div id="win-banner" class="hidden">
+      <span id="win-banner-text"></span>
+      <a href="#" id="win-banner-close"><i class="material-icons">close</i></a>
+    </div>
+
     <div class="clear"></div>
     <div class="row">
       <div class="col s6">

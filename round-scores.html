@@ -46,6 +46,14 @@
         height: 100% !important;
       }
 
+      /* Keep the nav bar clickable above the fullscreen landscape graph
+         below (it's position:fixed with z-index 9999, which would
+         otherwise render on top of a plain, unpositioned nav). */
+      nav {
+        position: relative;
+        z-index: 10000;
+      }
+
       /* In landscape, expand the graph to fill the viewport so it's big
          enough for a clean screenshot. Only applies while the graph
          view (not the table) is active. */
@@ -57,7 +65,7 @@
           width: 100vw;
           height: 100vh;
           margin: 0;
-          padding: 12px;
+          padding: 68px 12px 12px;
           box-sizing: border-box;
           background-color: #ffffff;
           z-index: 9999;
@@ -76,7 +84,8 @@
         <ul id="nav-mobile" class="left">
           <li><a href="index.html" id="back"><i class="material-icons">arrow_back</i></a></li>
           <li><a href="#" id="toggle-view"><i class="material-icons">show_chart</i></a></li>
-          <li><a href="#" id="toggle-chips"><i class="material-icons">visibility</i></a></li>
+          <li class="graph-only-btn hidden"><a href="#" id="toggle-chips"><i class="material-icons">visibility</i></a></li>
+          <li class="graph-only-btn hidden"><a href="#" id="share-graph"><i class="material-icons">share</i></a></li>
         </ul>
       </div>
     </nav>
@@ -342,6 +351,13 @@
         graphContainer.classList.toggle("landscape-graph", isGraphActive());
       }
 
+      // The chip-toggle and share buttons only make sense while the
+      // graph is on screen; hide them in table view.
+      const graphOnlyButtons = document.querySelectorAll(".graph-only-btn");
+      function syncGraphOnlyButtons() {
+        graphOnlyButtons.forEach((el) => el.classList.toggle("hidden", !isGraphActive()));
+      }
+
       toggleButton.addEventListener("click", () => {
         if (tableContainer.classList.contains("hidden")) {
           tableContainer.classList.remove("hidden");
@@ -356,9 +372,11 @@
           requestAnimationFrame(() => scoreChart.resize());
         }
         syncLandscapeClass();
+        syncGraphOnlyButtons();
       });
 
       syncLandscapeClass();
+      syncGraphOnlyButtons();
 
       // Toggle the on-chart total/delta/Tichu chips on and off
       const chipsToggleButton = document.getElementById("toggle-chips");
@@ -374,6 +392,42 @@
         updateChipsIcon();
       });
       updateChipsIcon();
+
+      // Share the chart as an image. Uses the Web Share API (with a
+      // file attachment) where supported, e.g. Android/iOS Chrome and
+      // Safari, so it opens straight into WhatsApp/etc.; falls back to
+      // a plain download on desktop browsers that don't support that.
+      const shareButton = document.getElementById("share-graph");
+      shareButton.addEventListener("click", () => {
+        scoreChart.canvas.toBlob(async (blob) => {
+          if (!blob) return;
+          const fileName = `tichu-scores-round-${labels.length || 0}.png`;
+          const file = new File([blob], fileName, { type: "image/png" });
+
+          if (navigator.canShare && navigator.canShare({ files: [file] })) {
+            try {
+              await navigator.share({
+                files: [file],
+                title: "Tichu Scores",
+                text: `${teamAName} vs ${teamBName}`,
+              });
+            } catch (err) {
+              // User cancelled the share sheet, or share failed silently.
+              console.log("Share cancelled or failed:", err);
+            }
+          } else {
+            // Fallback: trigger a plain download of the image.
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement("a");
+            a.href = url;
+            a.download = fileName;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+          }
+        }, "image/png");
+      });
     </script>
   </body>
 </html>

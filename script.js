@@ -24,7 +24,7 @@
     });
 
     // Tichu dropdown
-    $('.dropdown-content a').click(function() {
+    $('.tichu-modifier .dropdown-content a').click(function() {
       var parentId = $(this).parents('.card').attr('id');
       data[parentId].tichuModText = $(this).text();
       data[parentId].tichuMod = parseInt($(this).attr('data-value'));
@@ -92,11 +92,24 @@
       update();
     });
 
-    // Win threshold input -> save in localStorage
-    $("#winThreshold").on("input change", function() {
-      var value = parseInt($(this).val());
-      winThreshold = isNaN(value) || value <= 0 ? 500 : value;
+    // Win threshold: preset options in the dropdown
+    $('.win-threshold-option').click(function(e) {
+      e.preventDefault();
+      var value = parseInt($(this).attr('data-value'));
+      winThreshold = value;
       localStorage.setItem("winThreshold", winThreshold);
+      $('#win-threshold-button').text('Win: ' + winThreshold);
+      $('#customWinThreshold').val('');
+    });
+
+    // Win threshold: custom value field at the bottom of the dropdown
+    $('#customWinThreshold').on('change', function() {
+      var value = parseInt($(this).val());
+      if (!isNaN(value) && value > 0) {
+        winThreshold = value;
+        localStorage.setItem("winThreshold", winThreshold);
+        $('#win-threshold-button').text('Win: ' + winThreshold);
+      }
     });
 
     // Dismiss the win banner
@@ -136,7 +149,7 @@
   $('#round-counter').text('Round ' + roundNumber);
 
   winThreshold = parseInt(localStorage.getItem("winThreshold")) || 500;
-  $('#winThreshold').val(winThreshold);
+  $('#win-threshold-button').text('Win: ' + winThreshold);
 
   return update();
 };

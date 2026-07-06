@@ -6612,3 +6612,44 @@ th,
 td {
 padding: 10px;
 }
+/* Round counter, now living in the nav's brand-logo slot */
+#round-counter {
+font-weight: bold;
+font-size: 1.4rem;
+}
+
+/* Win threshold dropdown button, right side of the nav */
+#win-threshold-button {
+font-weight: bold;
+}
+.custom-threshold {
+padding: 4px 16px 12px;
+}
+.custom-threshold input {
+width: 100%;
+margin: 0;
+}
+
+/* Win banner */
+#win-banner {
+background-color: #4caf50;
+color: #fff;
+text-align: center;
+padding: 12px 16px;
+display: flex;
+align-items: center;
+justify-content: center;
+gap: 12px;
+font-weight: bold;
+}
+/* #win-banner's own display:flex above has higher specificity than the
+   generic .hidden class, so .hidden alone couldn't hide it. This rule
+   matches both, winning the tie-break so the banner stays hidden until
+   JS removes the .hidden class on an actual win. */
+#win-banner.hidden {
+display: none;
+}
+#win-banner a {
+color: #fff;
+display: flex;
+}
