@@ -6613,17 +6613,45 @@ td {
 padding: 10px;
 }
 /* Round counter, now living in the nav's brand-logo slot */
-#round-counter {
+#round-counter,
+#round-counter-display {
 font-weight: bold;
 font-size: 1.4rem;
 }
 
 /* Win threshold dropdown button, right side of the nav */
-#win-threshold-button {
+#win-threshold-button,
+#win-threshold-display {
 font-weight: bold;
 }
+/* Win threshold: custom panel, positioned under the nav button */
+#winThresholdPanel {
+position: absolute;
+top: 56px;
+right: 8px;
+background-color: #fff;
+box-shadow: 0 2px 6px rgba(0, 0, 0, 0.3);
+border-radius: 4px;
+z-index: 100;
+display: flex;
+flex-direction: column;
+min-width: 140px;
+overflow: hidden;
+}
+#winThresholdPanel.hidden {
+display: none;
+}
+#winThresholdPanel .win-threshold-option {
+padding: 12px 16px;
+color: #333;
+font-weight: bold;
+}
+#winThresholdPanel .win-threshold-option:active {
+background-color: #f2f2f2;
+}
 .custom-threshold {
-padding: 4px 16px 12px;
+padding: 8px 16px 12px;
+border-top: 1px solid #eee;
 }
 .custom-threshold input {
 width: 100%;

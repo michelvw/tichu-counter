@@ -24,7 +24,7 @@
     });
 
     // Tichu dropdown
-    $('.dropdown-content a').click(function() {
+    $('.tichu-modifier .dropdown-content a').click(function() {
       var parentId = $(this).parents('.card').attr('id');
       data[parentId].tichuModText = $(this).text();
       data[parentId].tichuMod = parseInt($(this).attr('data-value'));
@@ -92,11 +92,42 @@
       update();
     });
 
-    // Win threshold input -> save in localStorage
-    $("#winThreshold").on("input change", function() {
-      var value = parseInt($(this).val());
-      winThreshold = isNaN(value) || value <= 0 ? 500 : value;
+    // Win threshold panel: open/close on button click, close on outside click
+    $('#win-threshold-button').click(function(e) {
+      e.preventDefault();
+      $('#winThresholdPanel').toggleClass('hidden');
+    });
+    $(document).click(function(e) {
+      if (!$(e.target).closest('#winThresholdPanel, #win-threshold-button').length) {
+        $('#winThresholdPanel').addClass('hidden');
+      }
+    });
+
+    // Win threshold: preset options in the panel
+    $('.win-threshold-option').click(function(e) {
+      e.preventDefault();
+      var value = parseInt($(this).attr('data-value'));
+      winThreshold = value;
       localStorage.setItem("winThreshold", winThreshold);
+      $('#win-threshold-button').text('Win: ' + winThreshold);
+      $('#customWinThreshold').val('');
+      $('#winThresholdPanel').addClass('hidden');
+    });
+
+    // Win threshold: custom value field at the bottom of the panel
+    $('#customWinThreshold').on('change', function() {
+      var value = parseInt($(this).val());
+      if (!isNaN(value) && value > 0) {
+        winThreshold = value;
+        localStorage.setItem("winThreshold", winThreshold);
+        $('#win-threshold-button').text('Win: ' + winThreshold);
+      }
+      $('#winThresholdPanel').addClass('hidden');
+    });
+    // Prevent a click inside the panel (e.g. on the input) from
+    // bubbling up to the document handler above and closing it early.
+    $('#winThresholdPanel').click(function(e) {
+      e.stopPropagation();
     });
 
     // Dismiss the win banner
@@ -136,7 +167,7 @@
   $('#round-counter').text('Round ' + roundNumber);
 
   winThreshold = parseInt(localStorage.getItem("winThreshold")) || 500;
-  $('#winThreshold').val(winThreshold);
+  $('#win-threshold-button').text('Win: ' + winThreshold);
 
   return update();
 };

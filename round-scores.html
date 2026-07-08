@@ -80,12 +80,15 @@
   <body>
     <nav>
       <div class="nav-wrapper">
-        <a href="#" class="brand-logo center"></a>
+        <a href="#" class="brand-logo center" id="round-counter-display"></a>
         <ul id="nav-mobile" class="left">
           <li><a href="index.html" id="back"><i class="material-icons">arrow_back</i></a></li>
           <li><a href="#" id="toggle-view"><i class="material-icons">show_chart</i></a></li>
           <li class="graph-only-btn hidden"><a href="#" id="toggle-chips"><i class="material-icons">visibility</i></a></li>
           <li class="graph-only-btn hidden"><a href="#" id="share-graph"><i class="material-icons">share</i></a></li>
+        </ul>
+        <ul id="nav-mobile-right" class="right">
+          <li><a href="#" id="win-threshold-display"></a></li>
         </ul>
       </div>
     </nav>
@@ -131,6 +134,13 @@
       // Retrieve team names from localStorage
       const teamAName = localStorage.getItem("teamAName") || "Team A";
       const teamBName = localStorage.getItem("teamBName") || "Team B";
+
+      // Round number and win threshold are set on the main screen; just
+      // mirror them here for reference.
+      const roundNumber = parseInt(localStorage.getItem("roundNumber")) || 1;
+      document.getElementById("round-counter-display").textContent = "Round " + roundNumber;
+      const winThreshold = parseInt(localStorage.getItem("winThreshold")) || 500;
+      document.getElementById("win-threshold-display").textContent = "Win: " + winThreshold;
 
       // Update table headers and labels with team names
       document.getElementById("team-a-header").textContent = teamAName;
@@ -302,15 +312,11 @@
               position: "top",
             },
             title: {
-              display: false,
+              display: true,
               text: "Tichu Scores",
             },
             datalabels: {
               display: chipsVisible,
-            },
-            // Correctly positioned configuration option:
-            customCanvasBackgroundColor: {
-              color: '#ffffff',
             },
           },
           elements: {
@@ -336,17 +342,6 @@
             },
           },
         },
-        plugins: [{
-          id: 'customCanvasBackgroundColor',
-          beforeDraw: (chart, args, options) => {
-            const { ctx } = chart;
-            ctx.save();
-            ctx.globalCompositeOperation = 'destination-over';
-            ctx.fillStyle = options.color || '#ffffff';
-            ctx.fillRect(0, 0, chart.width, chart.height);
-            ctx.restore();
-          }
-        }],
       });
 
       // Toggle between table and graph
