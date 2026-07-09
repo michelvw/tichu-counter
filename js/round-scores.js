@@ -179,11 +179,15 @@ const scoreChart = new Chart(ctx, {
         position: "top",
       },
       title: {
-        display: true,
+        display: false,
         text: "Tichu Scores",
       },
       datalabels: {
         display: chipsVisible,
+      },
+      // Correctly positioned configuration option:
+      customCanvasBackgroundColor: {
+        color: '#ffffff',
       },
     },
     elements: {
@@ -209,6 +213,17 @@ const scoreChart = new Chart(ctx, {
       },
     },
   },
+   plugins: [{
+      id: 'customCanvasBackgroundColor',
+      beforeDraw: (chart, args, options) => {
+        const { ctx } = chart;
+        ctx.save();
+        ctx.globalCompositeOperation = 'destination-over';
+        ctx.fillStyle = options.color || '#ffffff';
+        ctx.fillRect(0, 0, chart.width, chart.height);
+        ctx.restore();
+      }
+    }],
 });
 
 // Toggle between table and graph
