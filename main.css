@@ -6612,24 +6612,29 @@ th,
 td {
 padding: 10px;
 }
-/* Round counter, now living in the nav's brand-logo slot. It's purely
-   informational (no click handler is bound to it), but Materialize
-   centers it absolutely across the whole nav width regardless of how
-   much space the surrounding icons actually leave. On narrow phones
-   that centered box can land directly on top of the share/chip-toggle
-   buttons and swallow the tap before it reaches them. pointer-events:
-   none lets taps pass straight through to whatever's underneath. */
-#round-counter,
-#round-counter-display {
+/* Win threshold dropdown button, right side of the nav (index.html only
+   -- it's a real, tappable control there, opening the picker panel). */
+#win-threshold-button {
 font-weight: bold;
-font-size: 1.4rem;
-pointer-events: none;
 }
 
-/* Win threshold dropdown button, right side of the nav */
-#win-threshold-button,
-#win-threshold-display {
+/* Info bar: a slim strip directly under the nav for purely informational
+   text (round number, and on the scores page, win threshold too). Its
+   own dedicated row means it never has to compete for space with the
+   nav's tap targets, which is what caused the earlier overlap issue. */
+.info-bar {
+background-color: #fff;
+color: #555;
+text-align: center;
+padding: 6px 12px;
+font-size: 0.95rem;
 font-weight: bold;
+border-bottom: 1px solid #eee;
+}
+.info-bar .divider {
+margin: 0 8px;
+color: #ccc;
+font-weight: normal;
 }
 /* Win threshold: custom panel, positioned under the nav button */
 #winThresholdPanel {
