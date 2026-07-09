@@ -6612,11 +6612,18 @@ th,
 td {
 padding: 10px;
 }
-/* Round counter, now living in the nav's brand-logo slot */
+/* Round counter, now living in the nav's brand-logo slot. It's purely
+   informational (no click handler is bound to it), but Materialize
+   centers it absolutely across the whole nav width regardless of how
+   much space the surrounding icons actually leave. On narrow phones
+   that centered box can land directly on top of the share/chip-toggle
+   buttons and swallow the tap before it reaches them. pointer-events:
+   none lets taps pass straight through to whatever's underneath. */
 #round-counter,
 #round-counter-display {
 font-weight: bold;
 font-size: 1.4rem;
+pointer-events: none;
 }
 
 /* Win threshold dropdown button, right side of the nav */
