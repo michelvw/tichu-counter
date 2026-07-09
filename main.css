@@ -6681,3 +6681,54 @@ display: none;
 color: #fff;
 display: flex;
 }
+
+/* --- round-scores.html: chart layout & landscape graph mode --- */
+
+/* The canvas needs a wrapper with an explicit, non-flex size to
+   measure against. Without this, Chart.js's resize observer and
+   the browser's layout engine can feed each other in a loop
+   (each thinks the other needs more room), and the chart grows
+   forever. The canvas is absolutely positioned to fill the
+   wrapper, which has a real height set via CSS below. */
+#chart-wrapper {
+position: relative;
+width: 100%;
+height: 55vh;
+}
+#scoreChart {
+position: absolute;
+top: 0;
+left: 0;
+width: 100% !important;
+height: 100% !important;
+}
+
+/* Keep the nav bar clickable above the fullscreen landscape graph
+   below (it's position:fixed with z-index 9999, which would
+   otherwise render on top of a plain, unpositioned nav). Harmless
+   on index.html too, since it just gives the nav a stacking context. */
+nav {
+position: relative;
+z-index: 10000;
+}
+
+/* In landscape, expand the graph to fill the viewport so it's big
+   enough for a clean screenshot. Only applies while the graph
+   view (not the table) is active. */
+@media (orientation: landscape) {
+#graph-container.landscape-graph {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  margin: 0;
+  padding: 68px 12px 12px;
+  box-sizing: border-box;
+  background-color: #ffffff;
+  z-index: 9999;
+}
+#graph-container.landscape-graph #chart-wrapper {
+  height: 100%;
+}
+}

@@ -48,7 +48,7 @@
         var prev = history.pop();
         data = prev.data;
         roundNumber = prev.roundNumber;
-        localStorage.setItem("roundNumber", roundNumber);
+        TichuStorage.setRoundNumber(roundNumber);
         $('#round-counter').text('Round ' + roundNumber);
         $('#win-banner').addClass('hidden');
       }
@@ -60,13 +60,8 @@
       // Clear the data object
       init();
 
-      // Clear the roundScores array in localStorage
-      localStorage.removeItem("roundScores");
-      console.log("Round scores reset.");
+      TichuStorage.resetGame();
 
-      // Reset totals in localStorage
-      localStorage.setItem("A_points", 0);
-      localStorage.setItem("B_points", 0);
       // Update the data object to reflect the reset totals
       data['A'].points = 0;
       data['B'].points = 0;
@@ -78,7 +73,6 @@
       // Reset round counter and clear any win banner
       history = [];
       roundNumber = 1;
-      localStorage.setItem("roundNumber", 1);
       $('#round-counter').text('Round 1');
       $('#win-banner').addClass('hidden');
 
@@ -108,7 +102,7 @@
       e.preventDefault();
       var value = parseInt($(this).attr('data-value'));
       winThreshold = value;
-      localStorage.setItem("winThreshold", winThreshold);
+      TichuStorage.setWinThreshold(winThreshold);
       $('#win-threshold-button').text('Win: ' + winThreshold);
       $('#customWinThreshold').val('');
       $('#winThresholdPanel').addClass('hidden');
@@ -119,7 +113,7 @@
       var value = parseInt($(this).val());
       if (!isNaN(value) && value > 0) {
         winThreshold = value;
-        localStorage.setItem("winThreshold", winThreshold);
+        TichuStorage.setWinThreshold(winThreshold);
         $('#win-threshold-button').text('Win: ' + winThreshold);
       }
       $('#winThresholdPanel').addClass('hidden');
@@ -136,12 +130,12 @@
       $('#win-banner').addClass('hidden');
     });
 
-    // Team name inputs -> save in localStorage
+    // Team name inputs -> save via TichuStorage
     $("#teamAName").on("input", function() {
-      localStorage.setItem("teamAName", $(this).val());
+      TichuStorage.setTeamName("A", $(this).val());
     });
     $("#teamBName").on("input", function() {
-      localStorage.setItem("teamBName", $(this).val());
+      TichuStorage.setTeamName("B", $(this).val());
     });
   });
 
@@ -150,7 +144,7 @@
   for (var i = 0; i < ref.length; i++) {
     var t = ref[i];
     data[t] = {
-      points: parseInt(localStorage.getItem(`${t}_points`)) || 0, // Restore points from localStorage
+      points: TichuStorage.getPoints(t), // Restore points from localStorage
       currentPoints: 50,
       tichuMod: 0,
       tichuModText: 'No Tichu',
@@ -159,14 +153,14 @@
   }
 
   // Set team names from localStorage or defaults
-  $("#teamAName").val(localStorage.getItem("teamAName") || "Team A");
-  $("#teamBName").val(localStorage.getItem("teamBName") || "Team B");
+  $("#teamAName").val(TichuStorage.getTeamName("A"));
+  $("#teamBName").val(TichuStorage.getTeamName("B"));
 
   // Restore round number and win threshold from localStorage
-  roundNumber = parseInt(localStorage.getItem("roundNumber")) || 1;
+  roundNumber = TichuStorage.getRoundNumber();
   $('#round-counter').text('Round ' + roundNumber);
 
-  winThreshold = parseInt(localStorage.getItem("winThreshold")) || 500;
+  winThreshold = TichuStorage.getWinThreshold();
   $('#win-threshold-button').text('Win: ' + winThreshold);
 
   return update();
@@ -204,7 +198,7 @@
     }
 
     // Array to store scores for each round
-    let roundScores = JSON.parse(localStorage.getItem("roundScores")) || [];
+    let roundScores = TichuStorage.getRoundScores();
 
     // Get updated scores and Tichu status
     const teamAScore = data['A'].points;
@@ -233,16 +227,16 @@
     console.log("Round scores saved:", roundScores);
 
     // Save to localStorage
-    localStorage.setItem("roundScores", JSON.stringify(roundScores));
+    TichuStorage.setRoundScores(roundScores);
 
     // Save updated totals to localStorage
-    localStorage.setItem("A_points", data['A'].points);
-    localStorage.setItem("B_points", data['B'].points);
+    TichuStorage.setPoints('A', data['A'].points);
+    TichuStorage.setPoints('B', data['B'].points);
     console.log("Updated totals saved to localStorage:", data['A'].points, data['B'].points);
 
     // Advance the round counter
     roundNumber++;
-    localStorage.setItem("roundNumber", roundNumber);
+    TichuStorage.setRoundNumber(roundNumber);
     $('#round-counter').text('Round ' + roundNumber);
 
     // Announce any team that just crossed the win threshold this round
@@ -300,8 +294,8 @@
 
   // Save scores to localStorage before navigating to round-scores.html
   $('#btn-round-scores').click(function() {
-    localStorage.setItem("A_points", data['A'].points);
-    localStorage.setItem("B_points", data['B'].points);
+    TichuStorage.setPoints('A', data['A'].points);
+    TichuStorage.setPoints('B', data['B'].points);
     console.log("Scores saved to localStorage:", data['A'].points, data['B'].points);
   });
 }).call(this);
