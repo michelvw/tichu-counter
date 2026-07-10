@@ -6621,11 +6621,21 @@ font-weight: bold;
 /* Info bar: a slim strip directly under the nav for purely informational
    text (round number, and on the scores page, win threshold too). Its
    own dedicated row means it never has to compete for space with the
-   nav's tap targets, which is what caused the earlier overlap issue. */
+   nav's tap targets, which is what caused the earlier overlap issue.
+
+   Uses flexbox rather than plain text-align:center. A flex container
+   always establishes its own new block formatting context, which makes
+   it immune to being pulled off-center by any leftover float layout
+   from a preceding sibling (e.g. the nav's floated icon lists) -- this
+   is a more robust guarantee than text-align:center gives on its own. */
 .info-bar {
+display: flex;
+width: 100%;
+box-sizing: border-box;
+justify-content: center;
+align-items: center;
 background-color: #fff;
 color: #555;
-text-align: center;
 padding: 6px 12px;
 font-size: 0.95rem;
 font-weight: bold;
