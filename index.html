@@ -36,6 +36,7 @@
     <script src="js/jquery-2.2.3.min.js"></script>
     <script src="js/materialize.min.js"></script>
     <script src="js/storage.js"></script>
+    <script src="js/players-storage.js"></script>
     <script type="text/javascript" src="js/script.js"></script>
 
   </head>
@@ -46,6 +47,7 @@
           <li><a href="#" id="undo"><i class="material-icons">undo</i></a></li>
           <li><a href="#" id="reset"><i class="material-icons">cached</i></a></li>
           <li><a href="round-scores.html" id="round-scores"><i class="material-icons">list</i></a></li>
+          <li><a href="sessions.html" id="sessions-link"><i class="material-icons">group</i></a></li>
         </ul>
         <ul id="nav-mobile-right" class="right">
           <li><a href="#" id="win-threshold-button">Win: 500</a></li>
@@ -54,6 +56,23 @@
     </nav>
     <div class="info-bar">
       <span id="round-counter">Round 1</span>
+      <!-- Shown only while scoring a game that belongs to a session (as
+           opposed to a plain Quick Game). Kept inline with the round
+           counter rather than as its own bar, so it doesn't compete for
+           attention during a normal Quick Game. -->
+      <span id="session-tag" class="hidden">
+        <span class="divider">&middot;</span>
+        <span id="session-tag-text"></span>
+        <a href="#" id="session-pause-link" title="Pause session"><i class="material-icons tiny">pause</i></a>
+      </span>
+    </div>
+
+    <!-- A one-time, dismissible nudge toward Sessions, shown only at the
+         start of a fresh board so people can choose their flow early
+         without Quick Game ever being blocked or gated. -->
+    <div id="mode-hint" class="hidden">
+      <span>Tracking players across a game night? <a href="sessions.html">Start a Session</a> instead.</span>
+      <a href="#" id="mode-hint-close"><i class="material-icons">close</i></a>
     </div>
 
     <!-- Custom panel for setting the win threshold. Deliberately not using
@@ -73,6 +92,7 @@
     <!-- Shown when a team's total crosses the win threshold -->
     <div id="win-banner" class="hidden">
       <span id="win-banner-text"></span>
+      <a href="#" id="win-banner-finish" class="hidden">Next Game</a>
       <a href="#" id="win-banner-close"><i class="material-icons">close</i></a>
     </div>
 

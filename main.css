@@ -6754,3 +6754,180 @@ z-index: 10000;
   height: 100%;
 }
 }
+
+/* --- index.html: session mode --- */
+
+/* Inline tag inside the existing info-bar (not a separate bar), kept
+   deliberately understated -- same size/weight as the round counter,
+   just muted -- so it doesn't compete for attention during normal play. */
+#session-tag {
+color: #999;
+font-weight: normal;
+display: inline-flex;
+align-items: center;
+}
+/* #session-tag's own display:inline-flex above has higher specificity
+   than the generic .hidden class (see #win-banner.hidden below for the
+   same issue), so .hidden alone can't hide it -- without this it stays
+   visible (and its nav link duplicates the nav bar's own icon) even
+   outside session mode. */
+#session-tag.hidden {
+display: none;
+}
+#session-pause-link {
+color: #ee6e73;
+display: inline-flex;
+align-items: center;
+margin-left: 4px;
+}
+#session-pause-link i {
+font-size: 16px;
+}
+#teamAName[readonly], #teamBName[readonly] {
+background-color: transparent;
+border-bottom-style: dashed;
+}
+
+#win-banner-finish {
+font-weight: bold;
+text-decoration: underline;
+}
+
+/* One-time nudge toward Sessions on a fresh board. Neutral/informational
+   tone (not orange/red like the win banner) since it's not an alert. */
+#mode-hint {
+display: flex;
+width: 100%;
+box-sizing: border-box;
+justify-content: space-between;
+align-items: center;
+background-color: #eceff1;
+color: #546e7a;
+padding: 6px 12px;
+font-size: 0.85rem;
+}
+/* Same specificity issue as #session-tag above: this element's own
+   display:flex needs an explicit .hidden override to actually hide. */
+#mode-hint.hidden {
+display: none;
+}
+#mode-hint a {
+color: #ee6e73;
+font-weight: bold;
+}
+
+/* --- sessions.html --- */
+
+#sessions-page section,
+#players-page section {
+margin-bottom: 32px;
+}
+#sessions-page h5,
+#players-page h5 {
+margin-bottom: 8px;
+}
+.add-player-row {
+margin-bottom: 4px;
+}
+.teams-preview {
+display: flex;
+gap: 12px;
+margin: 12px 0;
+}
+.team-preview-card {
+flex: 1;
+background-color: #f5f5f5;
+border-radius: 6px;
+padding: 10px 14px;
+text-align: center;
+}
+.team-preview-label {
+display: block;
+font-size: 0.75rem;
+text-transform: uppercase;
+letter-spacing: 0.05em;
+color: #888;
+font-weight: bold;
+margin-bottom: 4px;
+}
+#session-panel .chip {
+margin-bottom: 12px;
+}
+#session-panel .btn,
+#session-panel .btn-flat {
+margin: 4px 8px 12px 0;
+}
+#pick-status {
+font-weight: bold;
+color: #555;
+margin: 8px 0;
+}
+
+/* Player picker rows: the whole row is tappable (the label fills it),
+   not just the small checkbox -- and a selected row gets a clear
+   background highlight so it's obvious at a glance which players are
+   picked, without having to spot the tiny checkbox fill state. */
+.player-pick-row {
+padding: 0 !important;
+}
+.player-pick-row label {
+display: flex;
+align-items: center;
+width: 100%;
+padding: 10px 20px;
+cursor: pointer;
+box-sizing: border-box;
+}
+.player-pick-row label span {
+margin-left: 8px;
+}
+.player-pick-row.selected {
+background-color: #fff3e0;
+}
+
+/* --- Phase 4: statistics --- */
+
+.leaderboard-list {
+counter-reset: none;
+}
+.leaderboard-list .collection-item {
+display: flex;
+align-items: center;
+}
+.leaderboard-rank {
+font-weight: bold;
+color: #999;
+width: 28px;
+flex-shrink: 0;
+}
+.leaderboard-name {
+flex: 1;
+}
+.leaderboard-points {
+font-size: 0.85rem;
+color: #666;
+}
+
+/* Session history rows expand in place to show duration + leaderboard
+   on tap, instead of navigating to a separate detail page. */
+.history-summary {
+cursor: pointer;
+}
+.history-summary:hover {
+color: #ee6e73;
+}
+.history-detail {
+margin-top: 8px;
+}
+.history-detail.hidden {
+display: none;
+}
+
+.player-stats-block {
+margin-top: 8px;
+padding-left: 4px;
+border-left: 3px solid #eee;
+}
+.player-stats-block.hidden {
+display: none;
+}

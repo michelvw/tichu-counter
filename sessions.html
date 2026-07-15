@@ -1,0 +1,71 @@
+<!doctype html>
+<html class="no-js" lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+
+    <title>Sessions</title>
+
+    <script type="text/javascript">
+      var host = "michelvw.github.io";
+      if ((host == window.location.host) && (window.location.protocol != "https:"))
+        window.location.protocol = "https";
+    </script>
+
+    <script type="text/javascript">
+      if ("serviceWorker" in navigator) {
+        window.addEventListener("load", function () {
+          navigator.serviceWorker.register("service-worker.js").catch(function (err) {
+            console.warn("Service worker registration failed:", err);
+          });
+        });
+      }
+    </script>
+
+    <link rel="manifest" href="manifest.json">
+    <meta name="theme-color" content="#ee6e73">
+    <meta name="mobile-web-app-capable" content="yes">
+
+    <link rel="canonical" href="https://michelvw.github.io/tichu-counter/" />
+
+    <link rel="stylesheet" href="main.css">
+
+    <script src="js/jquery-2.2.3.min.js"></script>
+    <script src="js/materialize.min.js"></script>
+  </head>
+  <body>
+    <nav>
+      <div class="nav-wrapper">
+        <ul id="nav-mobile" class="left">
+          <li><a href="index.html" id="back"><i class="material-icons">arrow_back</i></a></li>
+          <li><a href="players.html" id="players-link"><i class="material-icons">person</i></a></li>
+        </ul>
+      </div>
+    </nav>
+    <div class="info-bar">
+      <span>Sessions</span>
+    </div>
+
+    <div class="container" id="sessions-page">
+
+      <!-- Filled in by sessions.js: either the "no session running" start
+           panel, or the active/paused session panel. Player picking in
+           the start panel reads the roster but managing it (add/rename/
+           archive) lives on its own page -- see players.html. -->
+      <section id="session-panel"></section>
+
+      <section id="history-panel">
+        <h5>Session History</h5>
+        <ul class="collection" id="session-history-list">
+          <li class="collection-item grey-text" id="no-history-msg">No sessions yet.</li>
+        </ul>
+      </section>
+
+    </div>
+
+    <script src="js/storage.js"></script>
+    <script src="js/players-storage.js"></script>
+    <script src="js/sessions.js"></script>
+  </body>
+</html>
