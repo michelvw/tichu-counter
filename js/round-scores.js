@@ -1,20 +1,60 @@
-// Retrieve team names from storage
-const teamAName = TichuStorage.getTeamName("A");
-const teamBName = TichuStorage.getTeamName("B");
+// This page normally shows the live scoreboard (Quick Game, or a
+// session game currently in progress) via TichuStorage. It can also
+// show a *finished* session game from history: passing ?game=<gameId>
+// reconstructs the same {teamAName, teamBName, roundScores, ...} shape
+// from that game's stored rounds instead, so the rest of this file
+// (table, graph, sharing) works unchanged either way.
+const historyGameId = new URLSearchParams(window.location.search).get("game");
+const historyGame = historyGameId && typeof TichuPlayers !== "undefined" ? TichuPlayers.getGame(historyGameId) : null;
 
-// Round number and win threshold are set on the main screen; just
-// mirror them here for reference.
-const roundNumber = TichuStorage.getRoundNumber();
-document.getElementById("round-counter-display").textContent = "Round " + roundNumber;
-const winThreshold = TichuStorage.getWinThreshold();
-document.getElementById("win-threshold-display").textContent = "Win: " + winThreshold;
+// Mirrors the exact Tichu-call label convention built in js/script.js's
+// nextRound() (HTML snippet with <s> for a lost call, prefixed with the
+// double-win glyph) so archived rounds render identically to live ones.
+function tichuLabel(mod, doubleWin) {
+  return (doubleWin ? "\u21c9 " : "") +
+    (mod === 200 ? "GT" :
+     mod === 100 ? "T" :
+     mod === -200 ? "<s>GT</s>" :
+     mod === -100 ? "<s>T</s>" : "");
+}
+
+let teamAName, teamBName, roundScores, roundCounterText, thresholdOrFinalText;
+
+if (historyGame) {
+  teamAName = historyGame.mode === "rotation"
+    ? TichuPlayers.teamNameString(historyGame.fixedTeam)
+    : TichuPlayers.teamNameString(historyGame.teams[0]);
+  teamBName = historyGame.mode === "rotation"
+    ? TichuPlayers.teamNameString(historyGame.pool)
+    : TichuPlayers.teamNameString(historyGame.teams[1]);
+  roundScores = (historyGame.rounds || []).map((r) => ({
+    teamA: r.teamAPoints,
+    teamB: r.teamBPoints,
+    teamATichu: tichuLabel(r.teamATichuMod, r.teamADoubleWin),
+    teamBTichu: tichuLabel(r.teamBTichuMod, r.teamBDoubleWin),
+  }));
+  roundCounterText = "Final \u2014 " + roundScores.length + " round" + (roundScores.length === 1 ? "" : "s");
+  thresholdOrFinalText = historyGame.finalScores
+    ? "Final: " + historyGame.finalScores.teamA + " - " + historyGame.finalScores.teamB
+    : "Finished";
+  // Came here from a session's game list -- send "back" there instead
+  // of the plain scoreboard, which wouldn't have this game loaded.
+  document.getElementById("back").href = "sessions.html";
+} else {
+  teamAName = TichuStorage.getTeamName("A");
+  teamBName = TichuStorage.getTeamName("B");
+  roundScores = TichuStorage.getRoundScores();
+  roundCounterText = "Round " + TichuStorage.getRoundNumber();
+  thresholdOrFinalText = "Win: " + TichuStorage.getWinThreshold();
+}
+
+document.getElementById("round-counter-display").textContent = roundCounterText;
+document.getElementById("win-threshold-display").textContent = thresholdOrFinalText;
 
 // Update table headers and labels with team names
 document.getElementById("team-a-header").textContent = teamAName;
 document.getElementById("team-b-header").textContent = teamBName;
 
-// Load round scores from storage
-const roundScores = TichuStorage.getRoundScores();
 const tableBody = document.querySelector("#round-scores tbody");
 
 // Data for the graph

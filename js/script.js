@@ -1,6 +1,11 @@
 (function() {
   var data, history, init, nextRound, update;
   var roundNumber, winThreshold;
+  // Session mode: set in init() when this scoreboard is being used to
+  // play out a game that belongs to a session (see sessions.js /
+  // players-storage.js), as opposed to a plain untracked Quick Game.
+  var sessionMode = false;
+  var currentGame = null;
 
   data = {};
   history = [];
@@ -51,12 +56,17 @@
         TichuStorage.setRoundNumber(roundNumber);
         $('#round-counter').text('Round ' + roundNumber);
         $('#win-banner').addClass('hidden');
+        updateSessionRoundDisplay();
       }
       return update();
     });
     $('#btn-next').click(nextRound);
    
     $('#reset').click(function() {
+      if (sessionMode && !window.confirm('This session\'s game is still in progress. Reset the scoreboard anyway?')) {
+        return;
+      }
+
       // Clear the data object
       init();
 
@@ -75,6 +85,10 @@
       roundNumber = 1;
       $('#round-counter').text('Round 1');
       $('#win-banner').addClass('hidden');
+      if (!sessionMode) {
+        var dismissed = localStorage.getItem('tichuModeHintDismissed') === 'true';
+        $('#mode-hint').toggleClass('hidden', dismissed);
+      }
 
       //clear the scores table on the round-scores.html page if it's open
       const tableBody = document.querySelector("#round-scores tbody");
@@ -130,6 +144,66 @@
       $('#win-banner').addClass('hidden');
     });
 
+    // Dismiss the "start a session?" nudge -- once dismissed it won't
+    // reappear (it's a one-time pointer toward Sessions, not a nag).
+    $('#mode-hint-close').click(function(e) {
+      e.preventDefault();
+      localStorage.setItem('tichuModeHintDismissed', 'true');
+      $('#mode-hint').addClass('hidden');
+    });
+
+    // Pause the session right from the scoreboard -- e.g. closing the
+    // app for the night with a game still in progress. Pausing doesn't
+    // touch the game/round data itself, so it's exactly where it was
+    // left when the session is resumed later.
+    $('#session-pause-link').click(function(e) {
+      e.preventDefault();
+      if (!sessionMode || !currentGame) return;
+      if (window.confirm('Pause this session? You can resume it anytime from Sessions.')) {
+        try {
+          TichuPlayers.pauseSession(currentGame.sessionId);
+        } catch (err) {
+          // Already paused (e.g. reached here via the back button after
+          // pausing elsewhere) -- nothing more to do, just head over.
+        }
+        window.location.href = 'sessions.html';
+      }
+    });
+
+    // Finish the current session game (session mode only): whichever
+    // team has more points right now is recorded as the winner, then
+    // the next game in the same session starts automatically -- the
+    // person stays on the scoreboard and only goes to Sessions when
+    // they actively choose to (pause/end there).
+    $('#win-banner-finish').click(function(e) {
+      e.preventDefault();
+      if (!sessionMode || !currentGame) return;
+      var winner = data['A'].points === data['B'].points ? null :
+        (data['A'].points > data['B'].points ? 'A' : 'B');
+      var sessionId = currentGame.sessionId;
+      TichuPlayers.finishGame(currentGame.id, winner, { teamA: data['A'].points, teamB: data['B'].points });
+      $('#win-banner').addClass('hidden');
+
+      var session = TichuPlayers.getSession(sessionId);
+      if (session && session.status === 'active') {
+        var nextLineup = TichuPlayers.previewLineupForSession(sessionId);
+        var nextGame = TichuPlayers.startNewGameInSession(sessionId, nextLineup);
+        var lineup = TichuPlayers.getRoundLineup(nextGame, 1);
+        TichuStorage.resetGame();
+        TichuStorage.setTeamName('A', TichuPlayers.teamNameString(lineup.teamA));
+        TichuStorage.setTeamName('B', TichuPlayers.teamNameString(lineup.teamB));
+        history = [];
+        init();
+        if (typeof M !== 'undefined' && M.toast) {
+          M.toast({ html: 'Game finished \u2014 next game started', displayLength: 2500 });
+        }
+      } else {
+        // Session got paused/ended elsewhere in the meantime -- nothing
+        // to continue into, so head back to Sessions.
+        window.location.href = 'sessions.html';
+      }
+    });
+
     // Team name inputs -> save via TichuStorage
     $("#teamAName").on("input", function() {
       TichuStorage.setTeamName("A", $(this).val());
@@ -163,8 +237,77 @@
   winThreshold = TichuStorage.getWinThreshold();
   $('#win-threshold-button').text('Win: ' + winThreshold);
 
+  // Session mode: if there's a game in progress for a session, this
+  // scoreboard is playing it out. Team names already came from
+  // TichuStorage above (sessions.js sets them before redirecting here),
+  // so just lock them against editing -- renaming here wouldn't rename
+  // the underlying player -- and surface the session tag in the info bar.
+  sessionMode = false;
+  currentGame = null;
+  if (typeof TichuPlayers !== 'undefined') {
+    currentGame = TichuPlayers.getCurrentGame();
+  }
+  if (currentGame) {
+    sessionMode = true;
+    $('#teamAName, #teamBName').prop('readonly', true);
+    $('#mode-hint').addClass('hidden');
+    updateSessionRoundDisplay();
+
+    // The win banner (and its Next Game action) only ever appeared as a
+    // one-off reaction inside nextRound() -- if someone crossed the
+    // threshold and then navigated away (e.g. to Sessions) before
+    // clicking Next Game, reloading this page lost that action entirely,
+    // stranding the session on a game that's colloquially finished but
+    // never actually got closed out. Recompute it from the restored
+    // points instead of relying on that one-off event.
+    var over = ref.filter(function(t) { return data[t].points >= winThreshold; });
+    if (over.length) {
+      var overNames = over.map(function(t) {
+        return $('#team' + t + 'Name').val() || ('Team ' + t);
+      });
+      var overVerb = overNames.length > 1 ? 'have' : 'has';
+      $('#win-banner-text').text(overNames.join(' & ') + ' ' + overVerb + ' reached ' + winThreshold + ' points! \uD83C\uDF89');
+      $('#win-banner').removeClass('hidden');
+      $('#win-banner-finish').removeClass('hidden');
+    }
+  } else {
+    $('#session-tag').addClass('hidden');
+    $('#teamAName, #teamBName').prop('readonly', false);
+    // A lightweight, dismissible nudge toward Sessions -- shown only at
+    // the start of a fresh, untouched board (so it doesn't nag once
+    // someone's mid-game) and only until the person dismisses it once.
+    var freshBoard = roundNumber === 1 && TichuStorage.getRoundScores().length === 0;
+    var dismissed = localStorage.getItem('tichuModeHintDismissed') === 'true';
+    $('#mode-hint').toggleClass('hidden', !(freshBoard && !dismissed));
+  }
+
   return update();
 };
+
+  // Session mode only: recompute who's actually playing this round and
+  // reflect it in Team B's name + the info-bar session tag. For a
+  // fixed-team (4-player) game this is the same every round; for a
+  // rotation (5-player) game it changes as the pool rotates who sits out.
+  function updateSessionRoundDisplay() {
+    if (!sessionMode || !currentGame) return;
+    var lineup = TichuPlayers.getRoundLineup(currentGame, roundNumber);
+    var teamAName = TichuPlayers.teamNameString(lineup.teamA);
+    var teamBName = TichuPlayers.teamNameString(lineup.teamB);
+    $('#teamAName').val(teamAName);
+    $('#teamBName').val(teamBName);
+    TichuStorage.setTeamName('A', teamAName);
+    TichuStorage.setTeamName('B', teamBName);
+
+    var session = TichuPlayers.getSession(currentGame.sessionId);
+    var gameCount = TichuPlayers.getSessionGames(currentGame.sessionId).length;
+    var label = (session && session.name ? session.name : 'Session') + ' \u2014 Game ' + gameCount;
+    if (lineup.sittingOut) {
+      var sittingOutPlayer = TichuPlayers.getPlayer(lineup.sittingOut);
+      label += ' \u00b7 ' + (sittingOutPlayer ? sittingOutPlayer.name : '?') + ' sits out';
+    }
+    $('#session-tag-text').text(label);
+    $('#session-tag').removeClass('hidden');
+  }
 
   update = function() {
     var ref = ['A', 'B'];
@@ -229,6 +372,21 @@
     // Save to localStorage
     TichuStorage.setRoundScores(roundScores);
 
+    // Session mode: also attach this round to the session's game record
+    // so it survives independently of TichuStorage's single-game slot.
+    if (sessionMode && currentGame) {
+      var roundLineup = TichuPlayers.getRoundLineup(currentGame, roundNumber);
+      TichuPlayers.recordRound(currentGame.id, {
+        teamAPoints: teamAScore,
+        teamBPoints: teamBScore,
+        teamATichuMod: data['A'].tichuMod,
+        teamBTichuMod: data['B'].tichuMod,
+        teamADoubleWin: data['A'].doubleWin,
+        teamBDoubleWin: data['B'].doubleWin,
+        sittingOutPlayerId: roundLineup.sittingOut,
+      });
+    }
+
     // Save updated totals to localStorage
     TichuStorage.setPoints('A', data['A'].points);
     TichuStorage.setPoints('B', data['B'].points);
@@ -238,6 +396,11 @@
     roundNumber++;
     TichuStorage.setRoundNumber(roundNumber);
     $('#round-counter').text('Round ' + roundNumber);
+    updateSessionRoundDisplay();
+    // The "start a session?" nudge only makes sense on an untouched
+    // board; once a round's been played there's no more "early stage"
+    // to nudge at.
+    $('#mode-hint').addClass('hidden');
 
     // Announce any team that just crossed the win threshold this round
     const winners = ref.filter(function(t) {
@@ -250,6 +413,7 @@
       const verb = names.length > 1 ? 'have' : 'has';
       $('#win-banner-text').text(names.join(' & ') + ' ' + verb + ' reached ' + winThreshold + ' points! \uD83C\uDF89');
       $('#win-banner').removeClass('hidden');
+      $('#win-banner-finish').toggleClass('hidden', !sessionMode);
     }
 
     // Reset temporary points for the next round
