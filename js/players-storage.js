@@ -61,6 +61,14 @@
     return a;
   }
 
+  // Rotate array so element at startIndex becomes first
+  function rotateArray(arr, startIndex) {
+    if (!Array.isArray(arr) || arr.length === 0) return arr.slice();
+    var n = arr.length;
+    var s = ((startIndex % n) + n) % n;
+    return arr.slice(s).concat(arr.slice(0, s));
+  }
+
   // ---- Players -----------------------------------------------------
 
   function getPlayers(opts) {
@@ -160,6 +168,10 @@
       startedAt: Date.now(),
       endedAt: null,
       playerIds: playerIds,
+      // Index used to decide which pool member sits out first in the
+      // next rotation-mode game. This advances each new game to keep
+      // sit-out duties balanced across the session.
+      nextPoolStart: 0,
       // Logs {pausedAt, resumedAt} pairs so session duration stats can
       // exclude paused time (see computeSessionStats).
       pauseLog: [],
@@ -322,8 +334,79 @@
     var counts = sessionPairingCounts(sessionId);
     var scored = candidates.map(function (c) { return { lineup: c, score: scoreLineup(c, counts) }; });
     var minScore = Math.min.apply(null, scored.map(function (s) { return s.score; }));
-    var minSet = scored.filter(function (s) { return s.score === minScore; }).map(function (s) { return s.lineup; });
-    var chosen = minSet[Math.floor(Math.random() * minSet.length)];
+
+    // For rotation mode, fairness is more important than a tiny repeat-pairing
+    // improvement: pick a lineup that keeps the 3-player pool distribution as
+    // even as possible across the session, then use repeat-pairing score as the
+    // final tiebreaker.
+    function poolExposureCounts(sessionId) {
+      var counts = {};
+      getSessionGames(sessionId).forEach(function (g) {
+        if (!g.winner) return;
+        if (g.mode === 'rotation' && g.pool) {
+          g.pool.forEach(function (pid) { counts[pid] = (counts[pid] || 0) + 1; });
+        }
+      });
+      return counts;
+    }
+    function sitOutFirstCounts(sessionId) {
+      var counts = {};
+      getSessionGames(sessionId).forEach(function (g) {
+        if (!g.winner) return;
+        if (g.mode === 'rotation' && g.pool && g.pool.length === 3) {
+          var firstSitter = g.pool[0];
+          counts[firstSitter] = (counts[firstSitter] || 0) + 1;
+        }
+      });
+      return counts;
+    }
+
+    var chosen;
+    if (candidates.length === 1) {
+      chosen = candidates[0];
+    } else {
+      var poolCounts = poolExposureCounts(sessionId);
+      var firstSitterCounts = sitOutFirstCounts(sessionId);
+      var nextStart = (session.nextPoolStart || 0) % 3;
+      var scoredWithFairness = candidates.map(function (ln) {
+        var repeatScore = scoreLineup(ln, counts);
+        var poolScore = 0;
+        var countsAfter = {};
+        session.playerIds.forEach(function (pid) {
+          countsAfter[pid] = (poolCounts[pid] || 0);
+        });
+        var firstSitterScore = 0;
+        if (ln.mode === 'rotation' && ln.pool) {
+          var rotatedPool = rotateArray(ln.pool, nextStart);
+          var sitterId = rotatedPool[0];
+          firstSitterScore = firstSitterCounts[sitterId] || 0;
+          ln.pool.forEach(function (pid) {
+            countsAfter[pid] = (countsAfter[pid] || 0) + 1;
+            poolScore += (poolCounts[pid] || 0);
+          });
+        }
+        var vals = session.playerIds.map(function (pid) { return countsAfter[pid] || 0; });
+        var average = vals.reduce(function (sum, value) { return sum + value; }, 0) / vals.length;
+        var variance = vals.reduce(function (sum, value) {
+          var delta = value - average;
+          return sum + (delta * delta);
+        }, 0);
+        return {
+          lineup: ln,
+          repeatScore: repeatScore,
+          poolScore: poolScore,
+          variance: variance,
+          firstSitterScore: firstSitterScore
+        };
+      });
+      var minFirst = Math.min.apply(null, scoredWithFairness.map(function (s) { return s.firstSitterScore; }));
+      var firstSet = scoredWithFairness.filter(function (s) { return s.firstSitterScore === minFirst; });
+      var minVariance = Math.min.apply(null, firstSet.map(function (s) { return s.variance; }));
+      var varianceSet = firstSet.filter(function (s) { return s.variance === minVariance; });
+      var minRepeat = Math.min.apply(null, varianceSet.map(function (s) { return s.repeatScore; }));
+      var repeatSet = varianceSet.filter(function (s) { return s.repeatScore === minRepeat; });
+      chosen = repeatSet[Math.floor(Math.random() * repeatSet.length)].lineup;
+    }
 
     // Randomize presentation within the chosen lineup -- which side is
     // "Team A"/"Team B", or the pool's sit-out order -- since that
@@ -332,7 +415,15 @@
       var teams = Math.random() < 0.5 ? [chosen.teams[0], chosen.teams[1]] : [chosen.teams[1], chosen.teams[0]];
       return { mode: "fixed", teams: teams };
     }
-    return { mode: "rotation", fixedTeam: chosen.fixedTeam, pool: shuffle(chosen.pool) };
+
+    // For rotation mode, shuffle the pool for presentation but rotate
+    // the pool so the first sitting-out player matches the session's
+    // nextPoolStart index. This keeps the preview aligned with which
+    // pool member will sit out in round 1 when the game starts.
+    var p = shuffle(chosen.pool);
+    var startIdx = (session && typeof session.nextPoolStart === 'number') ? (session.nextPoolStart % 3) : 0;
+    var rotatedPool = rotateArray(p, startIdx);
+    return { mode: "rotation", fixedTeam: chosen.fixedTeam, pool: rotatedPool };
   }
 
   // ---- Statistics -------------------------------------------------
@@ -547,13 +638,26 @@
     if (!session) throw new Error("Session not found.");
     if (session.status !== "active") throw new Error("Resume the session before starting a new game.");
     if (getCurrentGame()) throw new Error("A game is already in progress for this session.");
-    // Falls back to a plain random lineup if the UI doesn't pass one --
-    // callers that want repeat-pairing avoidance should generate the
-    // lineup with previewLineupForSession() and pass it in explicitly.
+    // Falls back to a lineup selected by previewLineupForSession if the
+    // UI doesn't pass one. That preview already avoids repeat pairings
+    // where possible.
     if (lineup && !isValidLineupFor(session.playerIds, lineup)) {
       throw new Error("That lineup doesn't match this session's players.");
     }
-    var finalLineup = lineup || previewLineup(session.playerIds);
+
+    var finalLineup = lineup || previewLineupForSession(sessionId);
+
+    // For rotation mode, ensure the pool order is rotated so the first
+    // sitting-out player corresponds to session.nextPoolStart. Advance
+    // the pointer so subsequent games start at the next pool member.
+    if (finalLineup.mode === "rotation") {
+      var nextStart = (session.nextPoolStart || 0) % 3;
+      var p = finalLineup.pool.slice();
+      finalLineup.pool = rotateArray(p, nextStart);
+      session.nextPoolStart = ((session.nextPoolStart || 0) + 1) % 3;
+      saveSession(session);
+    }
+
     var game = {
       id: makeId("g"),
       sessionId: sessionId,
@@ -603,6 +707,20 @@
     setCurrentGameId(null);
   }
 
+  function resetStatistics() {
+    // Clear accumulated history while keeping the player roster itself.
+    writeJSON(KEYS.SESSIONS, []);
+    writeJSON(KEYS.GAMES, []);
+    setCurrentGameId(null);
+
+    // Also clear the active quick-game snapshot so a fresh board isn't
+    // carrying hidden leftover totals from test data.
+    localStorage.removeItem("A_points");
+    localStorage.removeItem("B_points");
+    localStorage.removeItem("roundScores");
+    localStorage.removeItem("roundNumber");
+  }
+
   global.TichuPlayers = {
     KEYS: KEYS,
     // players
@@ -628,6 +746,7 @@
     pauseSession: pauseSession,
     resumeSession: resumeSession,
     endSession: endSession,
+    resetStatistics: resetStatistics,
     // games
     getSessionGames: getSessionGames,
     getGame: getGame,
