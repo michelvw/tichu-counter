@@ -335,13 +335,16 @@
     var scored = candidates.map(function (c) { return { lineup: c, score: scoreLineup(c, counts) }; });
     var minScore = Math.min.apply(null, scored.map(function (s) { return s.score; }));
 
-    // Narrow to the candidate set with minimal pairing-repeat score
-    var minSet = scored.filter(function (s) { return s.score === minScore; }).map(function (s) { return s.lineup; });
+    // Allow slightly worse pairing-score candidates in order to improve
+    // pool-frequency balance: include candidates within minScore + 1 so
+    // we don't pay a large pairing-repeat cost for better fairness.
+    var allowedMax = minScore + 1;
+    var candidateSet = scored.filter(function (s) { return s.score <= allowedMax; }).map(function (s) { return s.lineup; });
 
     // If rotation-mode candidates remain, prefer ones that balance how
     // often each player has previously been in the pool (the 3-player
     // side). Compute pool frequency counts across finished session games
-    // and use that as a tiebreaker (lower total pool frequency preferred).
+    // and use that as the primary tiebreaker (lower total pool frequency preferred).
     function poolFrequencyCounts(sessionId) {
       var counts = {};
       getSessionGames(sessionId).forEach(function (g) {
@@ -354,12 +357,11 @@
     }
 
     var chosen;
-    if (minSet.length === 1) {
-      chosen = minSet[0];
+    if (candidateSet.length === 1) {
+      chosen = candidateSet[0];
     } else {
-      // For rotation candidates, compute pool-frequency tiebreaker
       var poolCounts = poolFrequencyCounts(sessionId);
-      var scoredWithPool = minSet.map(function (ln) {
+      var scoredWithPool = candidateSet.map(function (ln) {
         var poolScore = 0;
         if (ln.mode === 'rotation' && ln.pool) {
           ln.pool.forEach(function (pid) { poolScore += (poolCounts[pid] || 0); });
