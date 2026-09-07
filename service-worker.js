@@ -25,6 +25,8 @@ const APP_SHELL = [
   "./manifest.json",
   "./js/jquery-2.2.3.min.js",
   "./js/materialize.min.js",
+  "./js/chart.min.js",
+  "./js/chartjs-plugin-datalabels.min.js",
   "./js/storage.js",
   "./js/players-storage.js",
   "./js/script.js",
