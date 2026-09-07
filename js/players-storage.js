@@ -61,6 +61,14 @@
     return a;
   }
 
+  // Rotate array so element at startIndex becomes first
+  function rotateArray(arr, startIndex) {
+    if (!Array.isArray(arr) || arr.length === 0) return arr.slice();
+    var n = arr.length;
+    var s = ((startIndex % n) + n) % n;
+    return arr.slice(s).concat(arr.slice(0, s));
+  }
+
   // ---- Players -----------------------------------------------------
 
   function getPlayers(opts) {
@@ -160,6 +168,10 @@
       startedAt: Date.now(),
       endedAt: null,
       playerIds: playerIds,
+      // Index used to decide which pool member sits out first in the
+      // next rotation-mode game. This advances each new game to keep
+      // sit-out duties balanced across the session.
+      nextPoolStart: 0,
       // Logs {pausedAt, resumedAt} pairs so session duration stats can
       // exclude paused time (see computeSessionStats).
       pauseLog: [],
@@ -332,7 +344,15 @@
       var teams = Math.random() < 0.5 ? [chosen.teams[0], chosen.teams[1]] : [chosen.teams[1], chosen.teams[0]];
       return { mode: "fixed", teams: teams };
     }
-    return { mode: "rotation", fixedTeam: chosen.fixedTeam, pool: shuffle(chosen.pool) };
+
+    // For rotation mode, shuffle the pool for presentation but rotate
+    // the pool so the first sitting-out player matches the session's
+    // nextPoolStart index. This keeps the preview aligned with which
+    // pool member will sit out in round 1 when the game starts.
+    var p = shuffle(chosen.pool);
+    var startIdx = (session && typeof session.nextPoolStart === 'number') ? (session.nextPoolStart % 3) : 0;
+    var rotatedPool = rotateArray(p, startIdx);
+    return { mode: "rotation", fixedTeam: chosen.fixedTeam, pool: rotatedPool };
   }
 
   // ---- Statistics -------------------------------------------------
@@ -547,13 +567,26 @@
     if (!session) throw new Error("Session not found.");
     if (session.status !== "active") throw new Error("Resume the session before starting a new game.");
     if (getCurrentGame()) throw new Error("A game is already in progress for this session.");
-    // Falls back to a plain random lineup if the UI doesn't pass one --
-    // callers that want repeat-pairing avoidance should generate the
-    // lineup with previewLineupForSession() and pass it in explicitly.
+    // Falls back to a lineup selected by previewLineupForSession if the
+    // UI doesn't pass one. That preview already avoids repeat pairings
+    // where possible.
     if (lineup && !isValidLineupFor(session.playerIds, lineup)) {
       throw new Error("That lineup doesn't match this session's players.");
     }
-    var finalLineup = lineup || previewLineup(session.playerIds);
+
+    var finalLineup = lineup || previewLineupForSession(sessionId);
+
+    // For rotation mode, ensure the pool order is rotated so the first
+    // sitting-out player corresponds to session.nextPoolStart. Advance
+    // the pointer so subsequent games start at the next pool member.
+    if (finalLineup.mode === "rotation") {
+      var nextStart = (session.nextPoolStart || 0) % 3;
+      var p = finalLineup.pool.slice();
+      finalLineup.pool = rotateArray(p, nextStart);
+      session.nextPoolStart = ((session.nextPoolStart || 0) + 1) % 3;
+      saveSession(session);
+    }
+
     var game = {
       id: makeId("g"),
       sessionId: sessionId,
