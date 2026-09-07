@@ -334,8 +334,42 @@
     var counts = sessionPairingCounts(sessionId);
     var scored = candidates.map(function (c) { return { lineup: c, score: scoreLineup(c, counts) }; });
     var minScore = Math.min.apply(null, scored.map(function (s) { return s.score; }));
+
+    // Narrow to the candidate set with minimal pairing-repeat score
     var minSet = scored.filter(function (s) { return s.score === minScore; }).map(function (s) { return s.lineup; });
-    var chosen = minSet[Math.floor(Math.random() * minSet.length)];
+
+    // If rotation-mode candidates remain, prefer ones that balance how
+    // often each player has previously been in the pool (the 3-player
+    // side). Compute pool frequency counts across finished session games
+    // and use that as a tiebreaker (lower total pool frequency preferred).
+    function poolFrequencyCounts(sessionId) {
+      var counts = {};
+      getSessionGames(sessionId).forEach(function (g) {
+        if (!g.winner) return;
+        if (g.mode === 'rotation' && g.pool) {
+          g.pool.forEach(function (pid) { counts[pid] = (counts[pid] || 0) + 1; });
+        }
+      });
+      return counts;
+    }
+
+    var chosen;
+    if (minSet.length === 1) {
+      chosen = minSet[0];
+    } else {
+      // For rotation candidates, compute pool-frequency tiebreaker
+      var poolCounts = poolFrequencyCounts(sessionId);
+      var scoredWithPool = minSet.map(function (ln) {
+        var poolScore = 0;
+        if (ln.mode === 'rotation' && ln.pool) {
+          ln.pool.forEach(function (pid) { poolScore += (poolCounts[pid] || 0); });
+        }
+        return { lineup: ln, poolScore: poolScore };
+      });
+      var minPoolScore = Math.min.apply(null, scoredWithPool.map(function (s) { return s.poolScore; }));
+      var minPoolSet = scoredWithPool.filter(function (s) { return s.poolScore === minPoolScore; }).map(function (s) { return s.lineup; });
+      chosen = minPoolSet[Math.floor(Math.random() * minPoolSet.length)];
+    }
 
     // Randomize presentation within the chosen lineup -- which side is
     // "Team A"/"Team B", or the pool's sit-out order -- since that
