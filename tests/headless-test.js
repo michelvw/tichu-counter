@@ -1,4 +1,4 @@
-const puppeteer = require('puppeteer');
+﻿const puppeteer = require('puppeteer');
 
 (async () => {
   const base = 'http://localhost:8000';
@@ -25,7 +25,7 @@ const puppeteer = require('puppeteer');
     const cacheReport = await page.evaluate(async () => {
       try {
         const cacheNames = await caches.keys();
-        const target = 'tichu-counter-v10';
+        const target = 'tichu-counter-v11';
         const hasCache = cacheNames.indexOf(target) !== -1;
         let hasChart = false;
         let hasPlugin = false;
@@ -107,7 +107,7 @@ const puppeteer = require('puppeteer');
       balanced = (mx - mn) <= 2;
     }
 
-    console.log('Balanced pool participation (max-min ≤ 2)?', balanced);
+    console.log('Balanced pool participation (max-min â‰¤ 2)?', balanced);
 
     await browser.close();
 
@@ -118,3 +118,4 @@ const puppeteer = require('puppeteer');
     process.exit(2);
   }
 })();
+

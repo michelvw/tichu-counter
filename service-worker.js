@@ -1,4 +1,4 @@
-/**
+﻿/**
  * Tichu Counter service worker.
  *
  * Replaces the deprecated AppCache mechanism (manifest.appcache), which
@@ -6,11 +6,11 @@
  *
  * IMPORTANT: bump CACHE_NAME any time index.html, round-scores.html,
  * main.css, or script.js change. That version bump is what tells
- * returning visitors "there's a new version, throw out the old cache" —
+ * returning visitors "there's a new version, throw out the old cache" â€”
  * forgetting it is exactly the kind of stuck-on-stale-files bug the old
  * AppCache setup caused.
  */
-const CACHE_NAME = "tichu-counter-v10";
+const CACHE_NAME = "tichu-counter-v11";
 
 // Core files needed to load and run the app offline. Chart.js and the
 // datalabels plugin are loaded from a CDN and are handled generically
@@ -102,3 +102,4 @@ self.addEventListener("fetch", (event) => {
     })
   );
 });
+
