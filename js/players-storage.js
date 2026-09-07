@@ -335,17 +335,11 @@
     var scored = candidates.map(function (c) { return { lineup: c, score: scoreLineup(c, counts) }; });
     var minScore = Math.min.apply(null, scored.map(function (s) { return s.score; }));
 
-    // Allow slightly worse pairing-score candidates in order to improve
-    // pool-frequency balance: include candidates within minScore + 1 so
-    // we don't pay a large pairing-repeat cost for better fairness.
-    var allowedMax = minScore + 1;
-    var candidateSet = scored.filter(function (s) { return s.score <= allowedMax; }).map(function (s) { return s.lineup; });
-
-    // If rotation-mode candidates remain, prefer ones that balance how
-    // often each player has previously been in the pool (the 3-player
-    // side). Compute pool frequency counts across finished session games
-    // and use that as the primary tiebreaker (lower total pool frequency preferred).
-    function poolFrequencyCounts(sessionId) {
+    // For rotation mode, fairness is more important than a tiny repeat-pairing
+    // improvement: pick a lineup that keeps the 3-player pool distribution as
+    // even as possible across the session, then use repeat-pairing score as the
+    // final tiebreaker.
+    function poolExposureCounts(sessionId) {
       var counts = {};
       getSessionGames(sessionId).forEach(function (g) {
         if (!g.winner) return;
@@ -355,22 +349,63 @@
       });
       return counts;
     }
+    function sitOutFirstCounts(sessionId) {
+      var counts = {};
+      getSessionGames(sessionId).forEach(function (g) {
+        if (!g.winner) return;
+        if (g.mode === 'rotation' && g.pool && g.pool.length === 3) {
+          var firstSitter = g.pool[0];
+          counts[firstSitter] = (counts[firstSitter] || 0) + 1;
+        }
+      });
+      return counts;
+    }
 
     var chosen;
-    if (candidateSet.length === 1) {
-      chosen = candidateSet[0];
+    if (candidates.length === 1) {
+      chosen = candidates[0];
     } else {
-      var poolCounts = poolFrequencyCounts(sessionId);
-      var scoredWithPool = candidateSet.map(function (ln) {
+      var poolCounts = poolExposureCounts(sessionId);
+      var firstSitterCounts = sitOutFirstCounts(sessionId);
+      var nextStart = (session.nextPoolStart || 0) % 3;
+      var scoredWithFairness = candidates.map(function (ln) {
+        var repeatScore = scoreLineup(ln, counts);
         var poolScore = 0;
+        var countsAfter = {};
+        session.playerIds.forEach(function (pid) {
+          countsAfter[pid] = (poolCounts[pid] || 0);
+        });
+        var firstSitterScore = 0;
         if (ln.mode === 'rotation' && ln.pool) {
-          ln.pool.forEach(function (pid) { poolScore += (poolCounts[pid] || 0); });
+          var rotatedPool = rotateArray(ln.pool, nextStart);
+          var sitterId = rotatedPool[0];
+          firstSitterScore = firstSitterCounts[sitterId] || 0;
+          ln.pool.forEach(function (pid) {
+            countsAfter[pid] = (countsAfter[pid] || 0) + 1;
+            poolScore += (poolCounts[pid] || 0);
+          });
         }
-        return { lineup: ln, poolScore: poolScore };
+        var vals = session.playerIds.map(function (pid) { return countsAfter[pid] || 0; });
+        var average = vals.reduce(function (sum, value) { return sum + value; }, 0) / vals.length;
+        var variance = vals.reduce(function (sum, value) {
+          var delta = value - average;
+          return sum + (delta * delta);
+        }, 0);
+        return {
+          lineup: ln,
+          repeatScore: repeatScore,
+          poolScore: poolScore,
+          variance: variance,
+          firstSitterScore: firstSitterScore
+        };
       });
-      var minPoolScore = Math.min.apply(null, scoredWithPool.map(function (s) { return s.poolScore; }));
-      var minPoolSet = scoredWithPool.filter(function (s) { return s.poolScore === minPoolScore; }).map(function (s) { return s.lineup; });
-      chosen = minPoolSet[Math.floor(Math.random() * minPoolSet.length)];
+      var minFirst = Math.min.apply(null, scoredWithFairness.map(function (s) { return s.firstSitterScore; }));
+      var firstSet = scoredWithFairness.filter(function (s) { return s.firstSitterScore === minFirst; });
+      var minVariance = Math.min.apply(null, firstSet.map(function (s) { return s.variance; }));
+      var varianceSet = firstSet.filter(function (s) { return s.variance === minVariance; });
+      var minRepeat = Math.min.apply(null, varianceSet.map(function (s) { return s.repeatScore; }));
+      var repeatSet = varianceSet.filter(function (s) { return s.repeatScore === minRepeat; });
+      chosen = repeatSet[Math.floor(Math.random() * repeatSet.length)].lineup;
     }
 
     // Randomize presentation within the chosen lineup -- which side is
@@ -672,6 +707,20 @@
     setCurrentGameId(null);
   }
 
+  function resetStatistics() {
+    // Clear accumulated history while keeping the player roster itself.
+    writeJSON(KEYS.SESSIONS, []);
+    writeJSON(KEYS.GAMES, []);
+    setCurrentGameId(null);
+
+    // Also clear the active quick-game snapshot so a fresh board isn't
+    // carrying hidden leftover totals from test data.
+    localStorage.removeItem("A_points");
+    localStorage.removeItem("B_points");
+    localStorage.removeItem("roundScores");
+    localStorage.removeItem("roundNumber");
+  }
+
   global.TichuPlayers = {
     KEYS: KEYS,
     // players
@@ -697,6 +746,7 @@
     pauseSession: pauseSession,
     resumeSession: resumeSession,
     endSession: endSession,
+    resetStatistics: resetStatistics,
     // games
     getSessionGames: getSessionGames,
     getGame: getGame,

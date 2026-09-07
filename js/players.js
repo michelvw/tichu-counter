@@ -26,8 +26,8 @@
     active.forEach(function (p) {
       var $li = $('<li class="collection-item"></li>');
       $li.append($('<span></span>').text(p.name));
-      var $actions = $('<span class="secondary-content"></span>');
-      var $stats = $('<a href="#" title="All-time stats"><i class="material-icons">bar_chart</i></a>');
+      var $actions = $('<span class="secondary-content action-buttons"></span>');
+      var $stats = $('<button type="button" class="icon-action" title="Show all-time stats"><i class="material-icons">bar_chart</i><span>Stats</span></button>');
       var $statsBlock = $('<div class="player-stats-block hidden"></div>');
       var statsShown = false;
       $stats.on("click", function (e) {
@@ -41,7 +41,7 @@
         }
         $statsBlock.toggleClass("hidden", !statsShown);
       });
-      var $rename = $('<a href="#" title="Rename"><i class="material-icons">edit</i></a>');
+      var $rename = $('<button type="button" class="icon-action" title="Rename"><i class="material-icons">edit</i></button>');
       $rename.on("click", function (e) {
         e.preventDefault();
         var name = window.prompt("Rename player", p.name);
@@ -50,7 +50,7 @@
           renderRoster();
         }
       });
-      var $archive = $('<a href="#" title="Archive"><i class="material-icons">archive</i></a>');
+      var $archive = $('<button type="button" class="icon-action" title="Archive"><i class="material-icons">archive</i></button>');
       $archive.on("click", function (e) {
         e.preventDefault();
         if (window.confirm(p.name + ' will be hidden from future sessions but keeps their history. Archive them?')) {
