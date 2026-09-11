@@ -6704,6 +6704,97 @@ color: #fff;
 display: flex;
 }
 
+/* Game progress visualization */
+#game-progress {
+margin: 12px 12px 4px;
+padding: 10px 12px 8px;
+background-color: #fff;
+border: 1px solid #c5cae9;
+border-radius: 12px;
+box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
+}
+.game-progress-heading,
+.progress-remaining {
+display: flex;
+align-items: center;
+justify-content: space-between;
+gap: 12px;
+color: #555;
+font-size: 0.78rem;
+}
+.game-progress-heading {
+margin-bottom: 8px;
+color: #173f9f;
+font-weight: bold;
+}
+#progress-score-summary {
+overflow: hidden;
+color: #777;
+font-weight: normal;
+text-overflow: ellipsis;
+white-space: nowrap;
+}
+.progress-track {
+position: relative;
+height: 12px;
+overflow: hidden;
+background-color: #eceff1;
+border-radius: 999px;
+}
+.progress-fill {
+position: absolute;
+top: 0;
+bottom: 0;
+width: 0;
+transition: width 180ms ease-out;
+}
+.progress-fill-a {
+left: 0;
+background-color: #174dcc;
+}
+.progress-fill-b {
+right: 0;
+background-color: #b64a0b;
+}
+.progress-goal-marker {
+position: absolute;
+top: -3px;
+bottom: -3px;
+left: 50%;
+z-index: 1;
+width: 2px;
+background-color: #263238;
+transform: translateX(-1px);
+}
+.progress-goal-marker span {
+position: absolute;
+top: 16px;
+left: 50%;
+padding: 0 4px;
+background-color: #fff;
+color: #263238;
+font-size: 0.7rem;
+font-weight: bold;
+line-height: 1.1;
+transform: translateX(-50%);
+}
+.progress-remaining {
+margin-top: 12px;
+}
+.progress-remaining span {
+max-width: 48%;
+overflow: hidden;
+text-overflow: ellipsis;
+white-space: nowrap;
+}
+.progress-remaining span:first-child {
+color: #174dcc;
+}
+.progress-remaining span:last-child {
+color: #b64a0b;
+text-align: right;
+}
+
 /* --- round-scores.html: chart layout & landscape graph mode --- */
 
 /* The canvas needs a wrapper with an explicit, non-flex size to
@@ -6805,6 +6896,19 @@ display: none;
 #mode-hint a {
 color: #ee6e73;
 font-weight: bold;
+}
+
+@media only screen and (max-width: 420px) {
+    #game-progress {
+        margin-left: 8px;
+        margin-right: 8px;
+        padding-left: 10px;
+        padding-right: 10px;
+    }
+    .game-progress-heading,
+    .progress-remaining {
+        font-size: 0.72rem;
+    }
 }
 
 /* --- sessions.html --- */

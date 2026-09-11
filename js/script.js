@@ -120,6 +120,7 @@
       $('#win-threshold-button').text('Win: ' + winThreshold);
       $('#customWinThreshold').val('');
       $('#winThresholdPanel').addClass('hidden');
+      update();
     });
 
     // Win threshold: custom value field at the bottom of the panel
@@ -129,6 +130,7 @@
         winThreshold = value;
         TichuStorage.setWinThreshold(winThreshold);
         $('#win-threshold-button').text('Win: ' + winThreshold);
+        update();
       }
       $('#winThresholdPanel').addClass('hidden');
     });
@@ -189,9 +191,11 @@
     // Team name inputs -> save via TichuStorage
     $("#teamAName").on("input", function() {
       TichuStorage.setTeamName("A", $(this).val());
+      update();
     });
     $("#teamBName").on("input", function() {
       TichuStorage.setTeamName("B", $(this).val());
+      update();
     });
   });
 
@@ -307,6 +311,24 @@
       $("a.dropdown-button[data-activates='tichuDropdown" + t + "']").text(data[t].tichuModText);
       $('#' + t + ' .double-win-checkbox').prop('checked', data[t].doubleWin);
     }
+
+    var goal = Math.max(winThreshold, 1);
+    var ratioA = Math.max(0, Math.min(data.A.points / goal, 1));
+    var ratioB = Math.max(0, Math.min(data.B.points / goal, 1));
+    var nameA = $('#teamAName').val() || 'Team A';
+    var nameB = $('#teamBName').val() || 'Team B';
+    var remainingA = Math.max(goal - data.A.points, 0);
+    var remainingB = Math.max(goal - data.B.points, 0);
+
+    $('#progress-goal, #progress-goal-marker-label').text(winThreshold);
+    $('#progress-score-summary').text(nameA + ': ' + data.A.points + ' \u00b7 ' + nameB + ': ' + data.B.points);
+    $('#progress-fill-a').css('width', (ratioA * 50) + '%');
+    $('#progress-fill-b').css('width', (ratioB * 50) + '%');
+    $('#progress-remaining-a').text(nameA + ': ' + (remainingA > 0 ? remainingA + ' left' : 'Goal reached'));
+    $('#progress-remaining-b').text(nameB + ': ' + (remainingB > 0 ? remainingB + ' left' : 'Goal reached'));
+    $('.progress-track').attr('aria-label',
+      nameA + ' has ' + data.A.points + ' points and ' + nameB + ' has ' +
+      data.B.points + ' points out of ' + winThreshold);
   };
 
   nextRound = function() {
