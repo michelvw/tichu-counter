@@ -456,8 +456,8 @@
       "sizes": "1024x1024"
     }
   ],
-  "theme_color": "#ec7375",
-  "background_color": "#ffffff",
+  "theme_color": "#0f9d6b",
+  "background_color": "#10151c",
   "screenshots" : [
   {
     "src": "screenshots/screenshot.jpg",
