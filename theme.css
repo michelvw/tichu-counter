@@ -641,3 +641,152 @@ table thead th {
     padding: 16px 12px;
   }
 }
+
+/* =========================================================================
+   Follow-up polish
+   -------------------------------------------------------------------------
+   1. Labelled, consistent icon nav (every action now names itself)
+   2. Tighter scoring header so the team cards sit higher in the viewport
+   3. Friendlier, centered empty states
+   4. Clearer "this name is editable" affordance on the team cards
+   ========================================================================= */
+
+/* ---- 1. labelled, consistent nav --------------------------------------- */
+
+nav,
+nav .nav-wrapper {
+  height: 64px;
+  line-height: normal;
+}
+nav .nav-wrapper {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 4px;
+}
+nav ul#nav-mobile,
+nav ul#nav-mobile-right {
+  display: flex;
+  align-items: stretch;
+  height: 64px;
+  margin: 0;
+}
+nav ul li {
+  display: flex;
+  height: 64px;
+}
+/* Icon + small caption stacked. The :not(#id) keeps the win-threshold pill
+   out of this rule and also lifts specificity above Materialize + the
+   earlier nav rules in this file, so it wins at every width. */
+nav ul a:not(#win-threshold-button) {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 3px;
+  height: 64px;
+  padding: 0 11px;
+  line-height: 1;
+  border-radius: var(--radius-sm);
+}
+nav ul a:not(#win-threshold-button) .material-icons {
+  height: auto;
+  margin: 0;
+  line-height: 1;
+  font-size: 23px;
+}
+nav ul a[data-label]::after {
+  content: attr(data-label);
+  font-size: 0.6rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  line-height: 1;
+  text-transform: uppercase;
+  color: inherit;
+}
+#win-threshold-button {
+  margin: 13px 6px;
+}
+@media only screen and (max-width: 380px) {
+  nav ul a:not(#win-threshold-button) {
+    padding: 0 8px;
+  }
+  nav ul a[data-label]::after {
+    font-size: 0.56rem;
+    letter-spacing: 0.02em;
+  }
+}
+
+/* ---- 2. tighter scoring header lifts the team cards -------------------- */
+
+.info-bar {
+  padding: 6px 12px;
+  font-size: 0.72rem;
+}
+#game-progress {
+  margin: 8px 10px 2px;
+  padding: 8px 12px 6px;
+}
+.game-progress-heading {
+  margin-bottom: 6px;
+}
+.progress-remaining {
+  margin-top: 8px;
+}
+.row {
+  margin-bottom: 10px;
+}
+.row .col .card,
+.card#A,
+.card#B {
+  margin-top: 8px;
+}
+#btn-next {
+  margin-top: 6px;
+}
+
+/* ---- 3. friendlier empty states ---------------------------------------- */
+
+.empty-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  padding: 30px 20px;
+  text-align: center;
+  color: var(--text-muted);
+}
+.empty-state .material-icons {
+  font-size: 42px;
+  color: var(--text-faint);
+}
+.empty-state p {
+  margin: 0;
+  max-width: 34ch;
+  line-height: 1.5;
+}
+.empty-state .btn {
+  margin-top: 4px;
+}
+/* single-line list empties get the same calm, centered treatment */
+.collection .collection-item.is-empty {
+  padding: 22px 16px;
+  text-align: center;
+  color: var(--text-muted);
+}
+
+/* ---- 4. clearer editable-name affordance ------------------------------- */
+
+.team-name {
+  padding-right: 22px;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%238a97a5' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M12 20h9'/%3E%3Cpath d='M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 4px center;
+  background-size: 13px 13px;
+}
+/* in session mode the names are read-only, so drop the affordance */
+#teamAName[readonly],
+#teamBName[readonly] {
+  padding-right: 4px;
+  background-image: none;
+}
