@@ -6929,25 +6929,6 @@ font-family: "Material Icons";
 color: #aaa;
 margin-left: auto;
 }
-.action-buttons {
-display: flex;
-align-items: center;
-gap: 4px;
-}
-.icon-action {
-border: 0;
-background: transparent;
-color: #777;
-cursor: pointer;
-padding: 8px;
-line-height: 1;
-}
-.icon-action:hover,
-.icon-action:focus {
-color: #ee6e73;
-background: #fff3f3;
-border-radius: 50%;
-}
 .player-stats-page {
 max-width: 560px;
 padding-bottom: 28px;
@@ -6961,6 +6942,25 @@ padding: 22px 4px 18px;
 .player-stats-header h4 {
 margin: 0 0 4px;
 font-size: 1.7rem;
+}
+.player-name-button {
+border: 0;
+padding: 0;
+background: transparent;
+color: inherit;
+cursor: pointer;
+font: inherit;
+text-align: left;
+}
+.player-name-button:hover,
+.player-name-button:focus {
+color: #ee6e73;
+}
+.player-name-input {
+margin: 0;
+height: 2.5rem;
+font-size: 1.7rem;
+font-weight: 400;
 }
 .player-stats-header p {
 margin: 0;
@@ -7041,9 +7041,13 @@ gap: 8px;
 .session-count strong {
 font-size: 1.5rem;
 }
-.reset-player-stats {
-display: block;
+.player-stats-actions {
+display: flex;
+justify-content: center;
+gap: 8px;
 margin: 28px auto 0;
+}
+.player-stats-actions button {
 font-size: .8rem;
 }
 

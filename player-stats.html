@@ -26,7 +26,7 @@
         <div class="player-stats-header">
           <div class="player-avatar" id="player-avatar"></div>
           <div>
-            <h4 id="player-name"></h4>
+            <h4><button type="button" id="player-name" class="player-name-button" aria-label="Rename player"></button></h4>
             <p class="grey-text">All-time performance</p>
           </div>
         </div>
@@ -58,7 +58,10 @@
           <div class="card-panel session-count"><strong id="sessions-attended"></strong><span class="grey-text">sessions played</span></div>
         </section>
 
-        <button type="button" id="reset-player-stats" class="btn-flat red-text reset-player-stats">Reset this player's statistics</button>
+        <div class="player-stats-actions">
+          <button type="button" id="archive-player" class="btn-flat red-text">Archive this player</button>
+          <button type="button" id="reset-player-stats" class="btn-flat red-text">Reset this player's statistics</button>
+        </div>
       </section>
     </main>
 
