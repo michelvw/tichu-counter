@@ -165,8 +165,8 @@ const scoreChart = new Chart(ctx, {
       {
         label: teamAName,
         data: teamAData,
-        borderColor: "rgba(255, 99, 132, 1)", // Red line
-        backgroundColor: "rgba(255, 99, 132, 0.2)", // Light red fill
+        borderColor: "rgba(224, 160, 47, 1)", // Team A amber line
+        backgroundColor: "rgba(224, 160, 47, 0.2)", // Team A amber fill
         borderWidth: 2,
         fill: true,
         pointRadius: 3,
@@ -175,7 +175,7 @@ const scoreChart = new Chart(ctx, {
           align: makeAlignFn(true),
           anchor: "center",
           offset: 6,
-          color: "rgba(200, 50, 80, 1)",
+          color: "rgba(150, 100, 15, 1)",
           font: { size: 9, weight: "bold" },
           backgroundColor: "rgba(255, 255, 255, 0.85)",
           borderRadius: 4,
@@ -187,8 +187,8 @@ const scoreChart = new Chart(ctx, {
       {
         label: teamBName,
         data: teamBData,
-        borderColor: "rgba(54, 162, 235, 1)", // Blue line
-        backgroundColor: "rgba(54, 162, 235, 0.2)", // Light blue fill
+        borderColor: "rgba(61, 142, 224, 1)", // Team B azure line
+        backgroundColor: "rgba(61, 142, 224, 0.2)", // Team B azure fill
         borderWidth: 2,
         fill: true,
         pointRadius: 3,
@@ -197,7 +197,7 @@ const scoreChart = new Chart(ctx, {
           align: makeAlignFn(false),
           anchor: "center",
           offset: 6,
-          color: "rgba(30, 110, 180, 1)",
+          color: "rgba(47, 116, 192, 1)",
           font: { size: 9, weight: "bold" },
           backgroundColor: "rgba(255, 255, 255, 0.85)",
           borderRadius: 4,
