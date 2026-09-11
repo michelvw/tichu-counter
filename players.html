@@ -47,9 +47,15 @@
     </div>
 
     <div class="container" id="players-page">
-      <section id="roster-panel">
-        <ul class="collection" id="active-players-list"></ul>
+      <section id="ranking-panel">
+        <ol class="collection ranking-list" id="player-ranking-list"></ol>
+        <div class="ranking-sort">
+          <label for="ranking-sort">Sort ranking by</label>
+          <select id="ranking-sort"></select>
+        </div>
+      </section>
 
+      <section id="roster-panel">
         <div class="row add-player-row">
           <div class="input-field col s8">
             <input type="text" id="new-player-name" placeholder="New player name">
@@ -61,7 +67,6 @@
 
         <a href="#" id="toggle-archived">Show archived players</a>
         <ul class="collection hidden" id="archived-players-list"></ul>
-
       </section>
     </div>
 
