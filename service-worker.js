@@ -10,7 +10,7 @@
  * forgetting it is exactly the kind of stuck-on-stale-files bug the old
  * AppCache setup caused.
  */
-const CACHE_NAME = "tichu-counter-v11";
+const CACHE_NAME = "tichu-counter-v12";
 
 // Core files needed to load and run the app offline. Chart.js and the
 // datalabels plugin are loaded from a CDN and are handled generically
@@ -21,6 +21,7 @@ const APP_SHELL = [
   "./round-scores.html",
   "./sessions.html",
   "./players.html",
+  "./player-stats.html",
   "./main.css",
   "./manifest.json",
   "./js/jquery-2.2.3.min.js",
@@ -33,6 +34,7 @@ const APP_SHELL = [
   "./js/round-scores.js",
   "./js/sessions.js",
   "./js/players.js",
+  "./js/player-stats.js",
   "./dragon-icon.svg",
 ];
 
@@ -102,4 +104,3 @@ self.addEventListener("fetch", (event) => {
     })
   );
 });
-

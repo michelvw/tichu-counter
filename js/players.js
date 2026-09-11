@@ -1,22 +1,6 @@
 (function () {
   "use strict";
 
-  function fmtStatsLine(stats) {
-    if (!stats.gamesPlayed) {
-      return "No session games played yet (" + stats.sessionsAttended + " session" + (stats.sessionsAttended === 1 ? "" : "s") + " joined).";
-    }
-    var lines = [];
-    lines.push(stats.gamesPlayed + " games \u00b7 " + stats.gamesWon + "W-" + stats.gamesLost + "L (" + stats.winPct + "%)");
-    lines.push(stats.totalPoints + " total pts \u00b7 " + stats.avgPointsPerGame + " avg \u00b7 " + stats.bestGameScore + " best game");
-    var tichuBits = [];
-    if (stats.tichuWon || stats.tichuLost) tichuBits.push("Tichu " + stats.tichuWon + "W/" + stats.tichuLost + "L");
-    if (stats.grandTichuWon || stats.grandTichuLost) tichuBits.push("Grand Tichu " + stats.grandTichuWon + "W/" + stats.grandTichuLost + "L");
-    if (stats.doubleWins) tichuBits.push(stats.doubleWins + " double win" + (stats.doubleWins === 1 ? "" : "s"));
-    if (tichuBits.length) lines.push(tichuBits.join(" \u00b7 "));
-    lines.push(stats.sessionsAttended + " session" + (stats.sessionsAttended === 1 ? "" : "s") + " played");
-    return lines;
-  }
-
   function renderRoster() {
     var active = TichuPlayers.getPlayers({ activeOnly: true });
     var $active = $("#active-players-list").empty();
@@ -25,23 +9,12 @@
     }
     active.forEach(function (p) {
       var $li = $('<li class="collection-item"></li>');
-      $li.append($('<span></span>').text(p.name));
       var $actions = $('<span class="secondary-content action-buttons"></span>');
-      var $stats = $('<button type="button" class="icon-action" title="Show all-time stats"><i class="material-icons">bar_chart</i><span>Stats</span></button>');
-      var $statsBlock = $('<div class="player-stats-block hidden"></div>');
-      var statsShown = false;
-      $stats.on("click", function (e) {
-        e.preventDefault();
-        statsShown = !statsShown;
-        if (statsShown && $statsBlock.is(":empty")) {
-          var lines = fmtStatsLine(TichuPlayers.computePlayerAllTimeStats(p.id));
-          (Array.isArray(lines) ? lines : [lines]).forEach(function (line) {
-            $statsBlock.append($('<p class="grey-text" style="font-size:0.85rem; margin: 4px 0;"></p>').text(line));
-          });
-        }
-        $statsBlock.toggleClass("hidden", !statsShown);
-      });
-      var $rename = $('<button type="button" class="icon-action" title="Rename"><i class="material-icons">edit</i></button>');
+      var $stats = $('<a class="player-row-link" title="View statistics"></a>')
+        .attr("href", "player-stats.html?id=" + encodeURIComponent(p.id));
+      $stats.append($('<span class="player-row-name"></span>').text(p.name));
+      var $rename = $('<button type="button" class="icon-action" title="Rename" aria-label="Rename"></button>');
+      $rename.append('<i class="material-icons">edit</i>');
       $rename.on("click", function (e) {
         e.preventDefault();
         var name = window.prompt("Rename player", p.name);
@@ -50,7 +23,8 @@
           renderRoster();
         }
       });
-      var $archive = $('<button type="button" class="icon-action" title="Archive"><i class="material-icons">archive</i></button>');
+      var $archive = $('<button type="button" class="icon-action" title="Archive" aria-label="Archive"></button>');
+      $archive.append('<i class="material-icons">archive</i>');
       $archive.on("click", function (e) {
         e.preventDefault();
         if (window.confirm(p.name + ' will be hidden from future sessions but keeps their history. Archive them?')) {
@@ -58,9 +32,7 @@
           renderRoster();
         }
       });
-      $actions.append($stats).append($rename).append($archive);
-      $li.append($actions);
-      $li.append($statsBlock);
+      $li.append($stats).append($actions);
       $active.append($li);
     });
 

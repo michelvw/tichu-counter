@@ -25,7 +25,7 @@
     const cacheReport = await page.evaluate(async () => {
       try {
         const cacheNames = await caches.keys();
-        const target = 'tichu-counter-v11';
+        const target = 'tichu-counter-v12';
         const hasCache = cacheNames.indexOf(target) !== -1;
         let hasChart = false;
         let hasPlugin = false;
@@ -118,4 +118,3 @@
     process.exit(2);
   }
 })();
-

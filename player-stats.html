@@ -1,0 +1,69 @@
+<!doctype html>
+<html class="no-js" lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Player statistics</title>
+    <meta name="theme-color" content="#ee6e73">
+    <link rel="manifest" href="manifest.json">
+    <link rel="stylesheet" href="main.css">
+    <script src="js/jquery-2.2.3.min.js"></script>
+    <script src="js/materialize.min.js"></script>
+  </head>
+  <body>
+    <nav>
+      <div class="nav-wrapper">
+        <ul id="nav-mobile" class="left">
+          <li><a href="players.html" aria-label="Back to players"><i class="material-icons">arrow_back</i></a></li>
+        </ul>
+      </div>
+    </nav>
+    <div class="info-bar"><span>Player statistics</span></div>
+
+    <main class="container player-stats-page" id="player-stats-page">
+      <p class="grey-text" id="stats-error"></p>
+      <section id="stats-content" class="hidden">
+        <div class="player-stats-header">
+          <div class="player-avatar" id="player-avatar"></div>
+          <div>
+            <h4 id="player-name"></h4>
+            <p class="grey-text">All-time performance</p>
+          </div>
+        </div>
+
+        <div class="stats-hero card-panel">
+          <span class="stats-label">Win rate</span>
+          <strong id="win-rate">0%</strong>
+          <span class="grey-text" id="record"></span>
+        </div>
+
+        <div class="stats-grid">
+          <div class="stat-card"><span class="stats-label">Games</span><strong id="games-played"></strong><span class="grey-text">played</span></div>
+          <div class="stat-card"><span class="stats-label">Points</span><strong id="total-points"></strong><span class="grey-text">total</span></div>
+          <div class="stat-card"><span class="stats-label">Average</span><strong id="average-points"></strong><span class="grey-text">per game</span></div>
+          <div class="stat-card"><span class="stats-label">Best game</span><strong id="best-game"></strong><span class="grey-text">points</span></div>
+        </div>
+
+        <section class="stats-section">
+          <h5>Special plays</h5>
+          <div class="stats-list card-panel">
+            <div><span>Tichu</span><strong id="tichu-record"></strong></div>
+            <div><span>Grand Tichu</span><strong id="grand-tichu-record"></strong></div>
+            <div><span>Double wins</span><strong id="double-wins"></strong></div>
+          </div>
+        </section>
+
+        <section class="stats-section">
+          <h5>Sessions</h5>
+          <div class="card-panel session-count"><strong id="sessions-attended"></strong><span class="grey-text">sessions played</span></div>
+        </section>
+
+        <button type="button" id="reset-player-stats" class="btn-flat red-text reset-player-stats">Reset this player's statistics</button>
+      </section>
+    </main>
+
+    <script src="js/storage.js"></script>
+    <script src="js/players-storage.js"></script>
+    <script src="js/player-stats.js"></script>
+  </body>
+</html>

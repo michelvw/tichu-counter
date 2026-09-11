@@ -87,7 +87,7 @@
     name = (name || "").trim();
     if (!name) throw new Error("Player name can't be empty.");
     var players = readJSON(KEYS.PLAYERS);
-    var player = { id: makeId("p"), name: name, active: true, createdAt: Date.now() };
+    var player = { id: makeId("p"), name: name, active: true, createdAt: Date.now(), statsResetAt: null };
     players.push(player);
     writeJSON(KEYS.PLAYERS, players);
     return player;
@@ -449,7 +449,11 @@
   // doesn't record which of the two teammates made the call), so
   // they're attributed to both players on that side for that round.
   function computePlayerSessionStats(playerId, sessionId) {
-    var games = getSessionGames(sessionId).filter(function (g) { return g.winner; });
+    var player = getPlayer(playerId);
+    var resetAt = player && player.statsResetAt ? player.statsResetAt : 0;
+    var games = getSessionGames(sessionId).filter(function (g) {
+      return g.winner && (!g.startedAt || g.startedAt > resetAt);
+    });
     var stats = {
       gamesPlayed: 0, gamesWon: 0, gamesLost: 0, winPct: 0,
       totalPoints: 0, avgPointsPerGame: 0, bestGameScore: null,
@@ -523,7 +527,14 @@
   // All-time stats for a player, aggregated across every session
   // they've been part of (regardless of that session's current status).
   function computePlayerAllTimeStats(playerId) {
-    var sessions = getSessions().filter(function (s) { return s.playerIds.indexOf(playerId) !== -1; });
+    var player = getPlayer(playerId);
+    var resetAt = player && player.statsResetAt ? player.statsResetAt : 0;
+    var sessions = getSessions().filter(function (s) {
+      if (s.playerIds.indexOf(playerId) === -1) return false;
+      return getSessionGames(s.id).some(function (g) {
+        return g.winner && (!g.startedAt || g.startedAt > resetAt);
+      });
+    });
     var totals = {
       sessionsAttended: sessions.length,
       gamesPlayed: 0, gamesWon: 0, gamesLost: 0, winPct: 0,
@@ -545,10 +556,20 @@
       if (stats.bestGameScore !== null && (totals.bestGameScore === null || stats.bestGameScore > totals.bestGameScore)) {
         totals.bestGameScore = stats.bestGameScore;
       }
+
     });
     totals.winPct = totals.gamesPlayed ? Math.round((totals.gamesWon / totals.gamesPlayed) * 1000) / 10 : 0;
     totals.avgPointsPerGame = totals.gamesPlayed ? Math.round(totals.totalPoints / totals.gamesPlayed) : 0;
     return totals;
+  }
+
+  function resetPlayerStatistics(playerId) {
+    var players = readJSON(KEYS.PLAYERS);
+    var player = players.filter(function (p) { return p.id === playerId; })[0];
+    if (!player) throw new Error("Player not found.");
+    player.statsResetAt = Date.now();
+    writeJSON(KEYS.PLAYERS, players);
+    return player;
   }
 
   function pauseSession(id) {
@@ -737,6 +758,7 @@
     computePlayerSessionStats: computePlayerSessionStats,
     computeSessionStats: computeSessionStats,
     computePlayerAllTimeStats: computePlayerAllTimeStats,
+    resetPlayerStatistics: resetPlayerStatistics,
     // sessions
     getSessions: getSessions,
     getSession: getSession,
