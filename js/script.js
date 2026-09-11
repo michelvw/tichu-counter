@@ -152,24 +152,6 @@
       $('#mode-hint').addClass('hidden');
     });
 
-    // Pause the session right from the scoreboard -- e.g. closing the
-    // app for the night with a game still in progress. Pausing doesn't
-    // touch the game/round data itself, so it's exactly where it was
-    // left when the session is resumed later.
-    $('#session-pause-link').click(function(e) {
-      e.preventDefault();
-      if (!sessionMode || !currentGame) return;
-      if (window.confirm('Pause this session? You can resume it anytime from Sessions.')) {
-        try {
-          TichuPlayers.pauseSession(currentGame.sessionId);
-        } catch (err) {
-          // Already paused (e.g. reached here via the back button after
-          // pausing elsewhere) -- nothing more to do, just head over.
-        }
-        window.location.href = 'sessions.html';
-      }
-    });
-
     // Finish the current session game (session mode only): whichever
     // team has more points right now is recorded as the winner, then
     // the next game in the same session starts automatically -- the
@@ -304,7 +286,7 @@
 
     var session = TichuPlayers.getSession(currentGame.sessionId);
     var gameCount = TichuPlayers.getSessionGames(currentGame.sessionId).length;
-    var label = (session && session.name ? session.name : 'Session') + ' \u2014 Game ' + gameCount;
+    var label = 'Session \u2014 Game ' + gameCount;
     if (lineup.sittingOut) {
       var sittingOutPlayer = TichuPlayers.getPlayer(lineup.sittingOut);
       label += ' \u00b7 ' + (sittingOutPlayer ? sittingOutPlayer.name : '?') + ' sits out';

@@ -6774,15 +6774,6 @@ align-items: center;
 #session-tag.hidden {
 display: none;
 }
-#session-pause-link {
-color: #ee6e73;
-display: inline-flex;
-align-items: center;
-margin-left: 4px;
-}
-#session-pause-link i {
-font-size: 16px;
-}
 #teamAName[readonly], #teamBName[readonly] {
 background-color: transparent;
 border-bottom-style: dashed;
@@ -7054,4 +7045,122 @@ font-size: 1.5rem;
 display: block;
 margin: 28px auto 0;
 font-size: .8rem;
+}
+
+/* --- mobile-first session flows --- */
+.sessions-page {
+max-width: 620px;
+padding-bottom: 32px;
+}
+.page-heading {
+padding: 20px 4px 12px;
+}
+.page-heading h4 {
+margin: 0 0 4px;
+}
+.helper-text {
+color: #777;
+font-size: .88rem;
+margin: 6px 0;
+}
+.player-picker {
+margin: 8px 0;
+}
+.session-actions {
+display: flex;
+flex-wrap: wrap;
+gap: 8px;
+margin: 16px 0 24px;
+}
+.session-actions .btn,
+.session-actions .btn-flat {
+margin: 0;
+}
+.session-actions-secondary {
+border-top: 1px solid #eee;
+padding-top: 12px;
+}
+.session-status-card,
+.session-summary-card {
+background: #fff;
+border-radius: 8px;
+box-shadow: 0 2px 8px rgba(0, 0, 0, .12);
+margin: 12px 0 20px;
+padding: 16px;
+}
+.session-status-card strong {
+display: block;
+font-size: 1.1rem;
+margin: 6px 0;
+}
+.status-label,
+.stats-label {
+color: #888;
+display: block;
+font-size: .72rem;
+font-weight: bold;
+letter-spacing: .08em;
+text-transform: uppercase;
+}
+.session-summary-card {
+display: grid;
+gap: 12px;
+grid-template-columns: repeat(2, minmax(0, 1fr));
+text-align: center;
+}
+.session-summary-card strong {
+display: block;
+font-size: 1.5rem;
+margin-top: 4px;
+}
+.session-details-page h6 {
+margin: 24px 0 8px;
+}
+.game-row {
+align-items: center;
+display: flex;
+min-height: 48px;
+}
+.game-row > span {
+padding-right: 12px;
+}
+.history-summary {
+cursor: pointer;
+display: flex;
+flex-direction: column;
+gap: 3px;
+padding: 4px 0;
+}
+.history-summary:hover {
+color: #ee6e73;
+}
+.history-detail {
+margin-top: 12px;
+}
+.empty-state {
+color: #777;
+padding: 48px 16px;
+text-align: center;
+}
+.empty-state .material-icons {
+color: #bbb;
+font-size: 42px;
+}
+.empty-state p {
+margin: 8px auto 20px;
+}
+@media (max-width: 480px) {
+.teams-preview {
+  flex-direction: column;
+  gap: 8px;
+}
+.session-actions {
+  align-items: stretch;
+  flex-direction: column;
+}
+.session-actions .btn,
+.session-actions .btn-flat {
+  text-align: center;
+  width: 100%;
+}
 }

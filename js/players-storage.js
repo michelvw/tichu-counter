@@ -163,7 +163,6 @@
     }
     var session = {
       id: makeId("s"),
-      name: (opts.name || "").trim() || null,
       status: "active",
       startedAt: Date.now(),
       endedAt: null,
@@ -597,9 +596,8 @@
   function endSession(id) {
     var session = getSession(id);
     if (!session) throw new Error("Session not found.");
-    if (getCurrentGame()) {
-      throw new Error("Finish or discard the in-progress game before ending the session.");
-    }
+    var currentGame = getCurrentGame();
+    if (currentGame && currentGame.sessionId === id) discardCurrentGame();
     session.status = "ended";
     session.endedAt = Date.now();
     // Close out any still-open pause interval (e.g. the session was
@@ -657,7 +655,11 @@
   function startNewGameInSession(sessionId, lineup) {
     var session = getSession(sessionId);
     if (!session) throw new Error("Session not found.");
-    if (session.status !== "active") throw new Error("Resume the session before starting a new game.");
+    if (session.status === "paused") {
+      session.status = "active";
+      saveSession(session);
+    }
+    if (session.status !== "active") throw new Error("This session cannot start a new game.");
     if (getCurrentGame()) throw new Error("A game is already in progress for this session.");
     // Falls back to a lineup selected by previewLineupForSession if the
     // UI doesn't pass one. That preview already avoids repeat pairings

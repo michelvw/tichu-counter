@@ -19,25 +19,6 @@
     return h ? (h + "h " + m + "m") : (m + "m");
   }
 
-  // A compact, ranked points leaderboard -- used both for a session's
-  // live "standings so far" and for its finished-session summary in
-  // history (requirements doc: "leaderboard, ranked by total points").
-  function renderLeaderboard($container, leaderboard) {
-    var $list = $('<ol class="collection leaderboard-list"></ol>');
-    leaderboard.forEach(function (row, i) {
-      var $li = $('<li class="collection-item"></li>');
-      $li.append($('<span class="leaderboard-rank"></span>').text("#" + (i + 1)));
-      $li.append($('<span class="leaderboard-name"></span>').text(row.playerName));
-      $li.append(
-        $('<span class="secondary-content leaderboard-points"></span>').text(
-          row.totalPoints + " pts \u00b7 " + row.gamesWon + "/" + row.gamesPlayed + " won"
-        )
-      );
-      $list.append($li);
-    });
-    $container.append($list);
-  }
-
   function playerName(id) {
     var p = TichuPlayers.getPlayer(id);
     return p ? p.name : "(removed player)";
@@ -46,9 +27,23 @@
   function lineupSummary(obj) {
     if (obj.mode === "rotation") {
       return "Fixed: " + obj.fixedTeam.map(playerName).join(" & ") +
-        " \u00b7 Pool: " + obj.pool.map(playerName).join(", ");
+        " · Pool: " + obj.pool.map(playerName).join(", ");
     }
     return obj.teams[0].map(playerName).join(" & ") + " vs " + obj.teams[1].map(playerName).join(" & ");
+  }
+
+  function renderLeaderboard($container, leaderboard) {
+    var $list = $('<ol class="collection leaderboard-list"></ol>');
+    leaderboard.forEach(function (row, i) {
+      var $li = $('<li class="collection-item"></li>');
+      $li.append($('<span class="leaderboard-rank"></span>').text("#" + (i + 1)));
+      $li.append($('<span class="leaderboard-name"></span>').text(row.playerName));
+      $li.append($('<span class="secondary-content leaderboard-points"></span>').text(
+        row.totalPoints + " pts · " + row.gamesWon + "/" + row.gamesPlayed + " won"
+      ));
+      $list.append($li);
+    });
+    $container.append($list);
   }
 
   function teamCard(label, ids) {
@@ -70,23 +65,18 @@
       $preview.append(teamCard("Team 1", pendingLineup.teams[0]));
       $preview.append(teamCard("Team 2", pendingLineup.teams[1]));
     } else {
-      $preview.append(teamCard("Fixed Team", pendingLineup.fixedTeam));
-      $preview.append(teamCard("Rotating Pool", pendingLineup.pool));
+      $preview.append(teamCard("Fixed team", pendingLineup.fixedTeam));
+      $preview.append(teamCard("Rotating pool", pendingLineup.pool));
     }
     $container.append($preview);
-
     if (pendingLineup.mode === "rotation") {
-      $container.append(
-        $('<p class="grey-text" style="font-size:0.85rem"></p>').text(
-          "One pool player sits out each round, in that order, then repeats — everyone sits out equally often."
-        )
-      );
+      $container.append($('<p class="helper-text"></p>').text(
+        "One pool player sits out each round so everyone sits out equally often."
+      ));
     }
-    if (note) {
-      $container.append($('<p class="grey-text" style="font-size:0.85rem"></p>').text(note));
-    }
+    if (note) $container.append($('<p class="helper-text"></p>').text(note));
 
-    var $reshuffle = $('<a href="#" class="waves-effect waves-light btn-flat">Reshuffle teams</a>');
+    var $reshuffle = $('<a href="#" class="waves-effect waves-light btn-flat action-secondary"><i class="material-icons left">shuffle</i>Reshuffle</a>');
     $reshuffle.on("click", function (e) {
       e.preventDefault();
       pendingLineup = generateFn(playerIds);
@@ -95,38 +85,28 @@
     $container.append($reshuffle);
   }
 
-  // Per-game summary list, reused for both a session's own games (while
-  // active) and a past session's games (in history): label with the
-  // final score, plus a link to that game's round-by-round table/graph
-  // (same view used while a game is actually in progress).
   function renderGamesList(games) {
-    var $list = $('<ul class="collection"></ul>');
+    var $list = $('<ul class="collection games-list"></ul>');
     games.forEach(function (g, i) {
-      var $li = $('<li class="collection-item"></li>');
-      var label = "Game " + (i + 1) + ": " + lineupSummary(g);
+      var label = "Game " + (i + 1);
       if (g.winner === "A" || g.winner === "B") {
-        var winnerLabel;
-        if (g.mode === "rotation") {
-          // Whichever two pool members actually played varied round to
-          // round, so credit the win to the whole pool roster rather
-          // than a generic "the rotating pool team" label.
-          winnerLabel = g.winner === "A" ? g.fixedTeam.map(playerName).join(" & ") : g.pool.map(playerName).join(", ");
-        } else {
-          winnerLabel = g.teams[g.winner === "A" ? 0 : 1].map(playerName).join(" & ");
-        }
-        label += " — won by " + winnerLabel;
+        var winnerLabel = g.mode === "rotation"
+          ? (g.winner === "A" ? g.fixedTeam.map(playerName).join(" & ") : g.pool.map(playerName).join(", "))
+          : g.teams[g.winner === "A" ? 0 : 1].map(playerName).join(" & ");
+        label += " · won by " + winnerLabel;
         if (g.finalScores) label += " (" + g.finalScores.teamA + " - " + g.finalScores.teamB + ")";
       } else if (g.winner === "tie") {
-        label += " — tied";
+        label += " · tied";
         if (g.finalScores) label += " (" + g.finalScores.teamA + " - " + g.finalScores.teamB + ")";
       } else {
-        label += " — in progress";
+        label += " · in progress";
       }
+
+      var $li = $('<li class="collection-item game-row"></li>');
       $li.append($("<span></span>").text(label));
       if (g.winner && (g.rounds || []).length) {
-        var $view = $('<a class="secondary-content" title="View rounds"><i class="material-icons">bar_chart</i></a>')
-          .attr("href", "round-scores.html?game=" + encodeURIComponent(g.id));
-        $li.append($view);
+        $li.append($('<a class="secondary-content icon-action" title="View rounds"><i class="material-icons">chevron_right</i></a>')
+          .attr("href", "round-scores.html?game=" + encodeURIComponent(g.id)));
       }
       $list.append($li);
     });
@@ -144,75 +124,54 @@
   function renderStartSessionForm() {
     var active = TichuPlayers.getPlayers({ activeOnly: true });
     var $panel = $("#session-panel").empty();
-    $panel.append("<h5>Start a Session</h5>");
-
+    $panel.append('<div class="page-heading"><h4>New session</h4><p class="helper-text">Choose 4 or 5 players to get started.</p></div>');
     if (active.length < 4) {
-      $panel.append('<p class="grey-text">Add at least 4 players on the <a href="players.html">Players page</a> to start a session.</p>');
+      $panel.append('<div class="empty-state"><i class="material-icons">group</i><p>Add at least 4 players on the <a href="players.html">Players page</a> to start a session.</p></div>');
       return;
     }
 
-    $panel.append('<p class="grey-text">Pick 4 players for two fixed teams, or 5 for one fixed team plus a rotating pool of 3.</p>');
-
-    var $list = $('<ul class="collection"></ul>');
+    var $list = $('<ul class="collection player-picker"></ul>');
     active.forEach(function (p) {
-      var $li = $('<li class="collection-item player-pick-row"></li>');
       var cbId = "pick-" + p.id;
-      $li.append(
+      $list.append($('<li class="collection-item player-pick-row"></li>').append(
         $('<label></label>').attr("for", cbId).append(
           $('<input type="checkbox" class="filled-in player-pick" />').attr("id", cbId).val(p.id),
           $('<span></span>').text(p.name)
         )
-      );
-      $list.append($li);
+      ));
     });
     $panel.append($list);
-
-    var $status = $('<p id="pick-status"></p>');
-    $panel.append($status);
-
-    var $nameField = $('<div class="input-field"><input type="text" id="session-name-input" placeholder="Session name (optional)"></div>');
-    $panel.append($nameField);
-
-    var $preview = $('<div id="session-team-preview"></div>');
-    $panel.append($preview);
-
-    var $startBtn = $('<a href="#" class="waves-effect waves-light btn disabled" id="start-session-btn">Start Session</a>');
-    $panel.append($startBtn);
+    $panel.append('<p id="pick-status" class="helper-text"></p>');
+    $panel.append('<div id="session-team-preview"></div>');
+    $panel.append('<div class="session-actions"><a href="#" class="waves-effect waves-light btn disabled" id="start-session-btn"><i class="material-icons left">play_arrow</i>Start session</a></div>');
 
     function selectedIds() {
       return $(".player-pick:checked").map(function () { return $(this).val(); }).get();
     }
-
     function refresh() {
       var ids = selectedIds();
       $(".player-pick").each(function () {
         $(this).closest(".player-pick-row").toggleClass("selected", this.checked);
       });
-      $status.text(ids.length + " selected \u2014 need 4 (fixed teams) or 5 (rotating pool)");
-
+      $("#pick-status").text(ids.length + " selected · need 4 or 5");
       if (ids.length === 4 || ids.length === 5) {
-        $startBtn.removeClass("disabled");
-        renderLineupPreview($preview, ids);
+        $("#start-session-btn").removeClass("disabled");
+        renderLineupPreview($("#session-team-preview"), ids);
       } else {
-        $startBtn.addClass("disabled");
-        $preview.empty();
+        $("#start-session-btn").addClass("disabled");
+        $("#session-team-preview").empty();
         pendingLineup = null;
         pendingPlayerIds = null;
       }
     }
     $panel.on("change", ".player-pick", refresh);
     refresh();
-
-    $startBtn.on("click", function (e) {
+    $("#start-session-btn").on("click", function (e) {
       e.preventDefault();
       var ids = selectedIds();
       if (ids.length !== 4 && ids.length !== 5) return;
       try {
-        var result = TichuPlayers.startSession({
-          playerIds: ids,
-          name: $("#session-name-input").val(),
-          lineup: pendingLineup,
-        });
+        var result = TichuPlayers.startSession({ playerIds: ids, lineup: pendingLineup });
         pendingLineup = null;
         pendingPlayerIds = null;
         goToScoreboard(result.game);
@@ -222,189 +181,107 @@
     });
   }
 
+  function endSession(session) {
+    if (!window.confirm("End session and discard the current game? Completed games will be kept.")) return;
+    try {
+      TichuPlayers.endSession(session.id);
+      renderAll();
+    } catch (err) {
+      window.alert(err.message);
+    }
+  }
+
   function renderActiveSessionPanel(session) {
     var $panel = $("#session-panel").empty();
     var games = TichuPlayers.getSessionGames(session.id);
     var currentGame = TichuPlayers.getCurrentGame();
-
-    var title = session.name ? session.name : "Session started " + fmtDate(session.startedAt);
-    $panel.append($("<h5></h5>").text(title));
-    $panel.append(
-      $('<span class="chip"></span>').text(session.status === "paused" ? "Paused" : "Active")
-    );
-    $panel.append(
-      $("<p></p>").text("Players: " + session.playerIds.map(playerName).join(", "))
-    );
+    $panel.append('<div class="page-heading"><h4>Current session</h4><p class="helper-text">' +
+      session.playerIds.map(playerName).join(" · ") + "</p></div>");
 
     if (currentGame) {
-      $panel.append(
-        $("<p></p>").text("Game " + (games.length) + " in progress: " + lineupSummary(currentGame))
-      );
-      var $continueBtn = $('<a href="#" class="waves-effect waves-light btn"></a>');
-      $continueBtn.text(session.status === "paused" ? "Resume & Continue Scoring" : "Continue Scoring");
-      $continueBtn.on("click", function (e) {
-        e.preventDefault();
-        // Coming back to an in-progress game from a paused session means
-        // play is resuming, whether or not the person used the explicit
-        // Resume control -- don't leave the session stuck marked Paused
-        // while a game is actively being scored.
-        if (session.status === "paused") TichuPlayers.resumeSession(session.id);
-        goToScoreboard(currentGame);
-      });
-      $panel.append($continueBtn);
-
-      if (session.status === "active") {
-        // Pausing mid-game (not just between games) is deliberate --
-        // e.g. closing the app for the night with a game still going.
-        // The game/round data isn't touched by pausing, so it's exactly
-        // where it was left once resumed.
-        var $pauseMidGameBtn = $('<a href="#" class="waves-effect waves-light btn-flat">Pause Session</a>');
-        $pauseMidGameBtn.on("click", function (e) {
-          e.preventDefault();
-          TichuPlayers.pauseSession(session.id);
-          renderAll();
-        });
-        $panel.append($pauseMidGameBtn);
-      }
-
-      var $discardBtn = $('<a href="#" class="waves-effect waves-light btn-flat red-text">Discard Game</a>');
-      $discardBtn.on("click", function (e) {
-        e.preventDefault();
-        if (window.confirm("Discard this in-progress game? Its scores won't be saved.")) {
-          TichuPlayers.discardCurrentGame();
-          renderAll();
-        }
-      });
-      // Once someone's already crossed the win threshold, the game is
-      // effectively over even though it isn't finished in the data yet
-      // (that happens when they hit Next Game on the scoreboard) --
-      // offering to discard it at that point reads as if it'd throw
-      // away a finished result, so point back to the scoreboard instead.
-      var liveWinThreshold = TichuStorage.getWinThreshold();
-      var gameEffectivelyWon = TichuStorage.getPoints("A") >= liveWinThreshold || TichuStorage.getPoints("B") >= liveWinThreshold;
-      if (gameEffectivelyWon) {
-        $panel.append($('<p class="grey-text" style="font-size:0.85rem"></p>').text(
-          "This game has reached the win threshold \u2014 continue scoring to finish it."
-        ));
-      } else {
-        $panel.append($discardBtn);
-      }
+      $panel.append($('<div class="session-status-card"></div>').append(
+        $('<span class="status-label">Game in progress</span>'),
+        $('<strong></strong>').text(lineupSummary(currentGame)),
+        $('<p class="helper-text"></p>').text("Use the back arrow to return to scoring.")
+      ));
     } else {
-      if (session.status === "paused") {
-        var $resumeBtn = $('<a href="#" class="waves-effect waves-light btn">Resume Session</a>');
-        $resumeBtn.on("click", function (e) {
-          e.preventDefault();
-          TichuPlayers.resumeSession(session.id);
-          renderAll();
-        });
-        $panel.append($resumeBtn);
-      } else {
-        var $preview = $('<div id="session-team-preview"></div>');
-        $panel.append($preview);
-        var hasPriorGames = games.some(function (g) { return g.winner; });
-        var lineupGenerator = function (ids) { return TichuPlayers.previewLineupForSession(session.id); };
-        var avoidanceNote = hasPriorGames
-          ? "Picked to avoid repeat pairings from earlier games this session."
-          : null;
-        renderLineupPreview($preview, session.playerIds, lineupGenerator, avoidanceNote);
-
-        var $newGameBtn = $('<a href="#" class="waves-effect waves-light btn">Start New Game</a>');
-        $newGameBtn.on("click", function (e) {
-          e.preventDefault();
-          var game = TichuPlayers.startNewGameInSession(session.id, pendingLineup);
-          pendingLineup = null;
-          pendingPlayerIds = null;
-          goToScoreboard(game);
-        });
-        $panel.append($newGameBtn);
-
-        var $pauseBtn = $('<a href="#" class="waves-effect waves-light btn-flat">Pause Session</a>');
-        $pauseBtn.on("click", function (e) {
-          e.preventDefault();
-          TichuPlayers.pauseSession(session.id);
-          renderAll();
-        });
-        $panel.append($pauseBtn);
-      }
-
-      var $endBtn = $('<a href="#" class="waves-effect waves-light btn-flat red-text">End Session</a>');
-      $endBtn.on("click", function (e) {
+      var $preview = $('<div id="session-team-preview"></div>');
+      var hasPriorGames = games.some(function (g) { return g.winner; });
+      renderLineupPreview($preview, session.playerIds, function () {
+        return TichuPlayers.previewLineupForSession(session.id);
+      }, hasPriorGames ? "Pairings are balanced against earlier games." : null);
+      $panel.append($preview);
+      $panel.append('<div class="session-actions"><a href="#" class="waves-effect waves-light btn" id="new-game-btn"><i class="material-icons left">play_arrow</i>Start next game</a></div>');
+      $("#new-game-btn").on("click", function (e) {
         e.preventDefault();
-        if (window.confirm("End this session? It'll move to session history and can't be resumed.")) {
-          try {
-            TichuPlayers.endSession(session.id);
-            renderAll();
-          } catch (err) {
-            window.alert(err.message);
-          }
+        try {
+          goToScoreboard(TichuPlayers.startNewGameInSession(session.id, pendingLineup));
+        } catch (err) {
+          window.alert(err.message);
         }
       });
-      $panel.append($endBtn);
     }
 
-    if (games.length) {
-      var sessionStats = TichuPlayers.computeSessionStats(session.id);
-      if (sessionStats.leaderboard.some(function (row) { return row.gamesPlayed > 0; })) {
-        $panel.append($("<h6></h6>").text("Standings so far"));
-        var $standings = $('<div id="session-standings"></div>');
-        $panel.append($standings);
-        renderLeaderboard($standings, sessionStats.leaderboard);
-      }
-
-      var $gamesList = renderGamesList(games);
-      $panel.append($("<h6></h6>").text("Games"));
-      $panel.append($gamesList);
-    }
-  }
-
-  function renderSessionPanel() {
-    var session = TichuPlayers.getActiveOrPausedSession();
-    if (session) renderActiveSessionPanel(session);
-    else renderStartSessionForm();
+    $panel.append('<div class="session-actions session-actions-secondary"><a href="session-details.html" class="waves-effect waves-light btn-flat"><i class="material-icons left">insights</i>View details</a><a href="#" id="end-session-btn" class="waves-effect waves-light btn-flat red-text"><i class="material-icons left">stop</i>End session</a></div>');
+    $("#end-session-btn").on("click", function (e) {
+      e.preventDefault();
+      endSession(session);
+    });
   }
 
   function renderHistory() {
-    var history = TichuPlayers.getSessionHistory();
     var $list = $("#session-history-list").empty();
+    var history = TichuPlayers.getSessionHistory();
     if (!history.length) {
       $list.append('<li class="collection-item grey-text">No sessions yet.</li>');
       return;
     }
     history.forEach(function (s) {
       var games = TichuPlayers.getSessionGames(s.id);
-      var title = s.name ? s.name : fmtDate(s.startedAt);
+      var stats = TichuPlayers.computeSessionStats(s.id);
       var $li = $('<li class="collection-item history-item"></li>');
-      var $summary = $('<div class="history-summary"></div>').text(
-        title + " — " + games.length + " game" + (games.length === 1 ? "" : "s")
+      var $summary = $('<div class="history-summary"></div>').append(
+        $('<strong></strong>').text("Session · " + fmtDate(s.startedAt)),
+        $('<span class="helper-text"></span>').text(games.length + " game" + (games.length === 1 ? "" : "s") + " · " + fmtDuration(stats.durationMs))
       );
-      $li.append($summary);
-      $li.append($('<div class="grey-text" style="font-size:0.85rem"></div>').text(s.playerIds.map(playerName).join(", ")));
-
       var $detail = $('<div class="history-detail hidden"></div>');
-      $li.append($detail);
-
-      var expanded = false;
-      $summary.on("click", function () {
-        expanded = !expanded;
-        if (expanded && $detail.is(":empty")) {
-          var stats = TichuPlayers.computeSessionStats(s.id);
-          $detail.append($('<p class="grey-text" style="font-size:0.85rem"></p>').text("Duration: " + fmtDuration(stats.durationMs)));
-          renderLeaderboard($detail, stats.leaderboard);
-          if (games.length) {
-            $detail.append($("<h6></h6>").text("Games"));
-            $detail.append(renderGamesList(games));
-          }
-        }
-        $detail.toggleClass("hidden", !expanded);
-      });
-
+      $detail.append($('<p class="helper-text"></p>').text(s.playerIds.map(playerName).join(" · ")));
+      renderLeaderboard($detail, stats.leaderboard);
+      if (games.length) $detail.append(renderGamesList(games));
+      $summary.on("click", function () { $detail.toggleClass("hidden"); });
+      $li.append($summary, $detail);
       $list.append($li);
     });
   }
 
+  function renderDetails() {
+    var $panel = $("#session-details-panel").empty();
+    var session = TichuPlayers.getActiveOrPausedSession();
+    if (!session) {
+      $panel.append('<div class="empty-state"><i class="material-icons">insights</i><p>No active session.</p><a href="sessions.html" class="btn">Back to sessions</a></div>');
+      return;
+    }
+    var games = TichuPlayers.getSessionGames(session.id);
+    var stats = TichuPlayers.computeSessionStats(session.id);
+    $panel.append('<div class="page-heading"><h4>Session details</h4><p class="helper-text">' + session.playerIds.map(playerName).join(" · ") + "</p></div>");
+    var $summary = $('<div class="session-summary-card"></div>');
+    $summary.append($('<div><span class="stats-label">Games played</span><strong></strong></div>').find("strong").text(games.filter(function (g) { return g.winner; }).length).end());
+    $summary.append($('<div><span class="stats-label">Duration</span><strong></strong></div>').find("strong").text(fmtDuration(stats.durationMs)).end());
+    $panel.append($summary);
+    $panel.append("<h6>Standings</h6>");
+    renderLeaderboard($panel, stats.leaderboard);
+    $panel.append("<h6>Game history</h6>");
+    $panel.append(games.length ? renderGamesList(games) : '<p class="helper-text">No completed games yet.</p>');
+  }
+
   function renderAll() {
-    renderSessionPanel();
-    renderHistory();
+    if ($("#session-panel").length) {
+      var session = TichuPlayers.getActiveOrPausedSession();
+      if (session) renderActiveSessionPanel(session);
+      else renderStartSessionForm();
+    }
+    if ($("#session-history-list").length) renderHistory();
+    if ($("#session-details-panel").length) renderDetails();
   }
 
   renderAll();
