@@ -292,7 +292,11 @@
     if (!sessionMode || !currentGame) return;
     var lineup = TichuPlayers.getRoundLineup(currentGame, roundNumber);
     var teamAName = TichuPlayers.teamNameString(lineup.teamA);
-    var teamBName = TichuPlayers.teamNameString(lineup.teamB);
+    // In a 5-player rotation game, Team B is the full pool even though
+    // only two pool members play in any individual round.
+    var teamBName = TichuPlayers.teamNameString(
+      currentGame.mode === 'rotation' ? currentGame.pool : lineup.teamB
+    );
     $('#teamAName').val(teamAName);
     $('#teamBName').val(teamBName);
     TichuStorage.setTeamName('A', teamAName);
