@@ -6707,7 +6707,7 @@ display: flex;
 /* Game progress visualization */
 #game-progress {
 margin: 12px 12px 4px;
-padding: 10px 12px 8px;
+padding: 12px 12px 8px;
 background-color: #fff;
 border: 1px solid #c5cae9;
 border-radius: 12px;
@@ -6720,7 +6720,8 @@ align-items: center;
 justify-content: space-between;
 gap: 12px;
 color: #555;
-font-size: 0.78rem;
+font-size: 0.83rem;
+font-weight: 600;
 }
 .game-progress-heading {
 margin-bottom: 8px;
@@ -6736,10 +6737,10 @@ white-space: nowrap;
 }
 .progress-track {
 position: relative;
-height: 12px;
+height: 25px;
 overflow: hidden;
 background-color: #eceff1;
-border-radius: 999px;
+border-radius: 8px;
 }
 .progress-fill {
 position: absolute;
@@ -6768,7 +6769,7 @@ transform: translateX(-1px);
 }
 .progress-goal-marker span {
 position: absolute;
-top: 16px;
+top: 11px;
 left: 50%;
 padding: 0 4px;
 background-color: #fff;
@@ -6779,7 +6780,7 @@ line-height: 1.1;
 transform: translateX(-50%);
 }
 .progress-remaining {
-margin-top: 12px;
+margin-top: 12px
 }
 .progress-remaining span {
 max-width: 48%;
@@ -6907,7 +6908,8 @@ font-weight: bold;
     }
     .game-progress-heading,
     .progress-remaining {
-        font-size: 0.72rem;
+        font-size: 0.83rem;
+        font-weight: 600;
     }
 }
 

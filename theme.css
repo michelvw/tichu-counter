@@ -725,7 +725,7 @@ nav ul a[data-label]::after {
 }
 #game-progress {
   margin: 8px 10px 2px;
-  padding: 8px 12px 6px;
+  padding: 12px 12px 6px;
 }
 .game-progress-heading {
   margin-bottom: 6px;
