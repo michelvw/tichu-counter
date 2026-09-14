@@ -85,7 +85,7 @@
     $container.append($reshuffle);
   }
 
-  function renderGamesList(games) {
+  function renderGamesList(games, onDeleteGame) {
     var $list = $('<ul class="collection games-list"></ul>');
     games.forEach(function (g, i) {
       var label = "Game " + (i + 1);
@@ -107,6 +107,13 @@
       if (g.winner && (g.rounds || []).length) {
         $li.append($('<a class="secondary-content icon-action" title="View rounds"><i class="material-icons">chevron_right</i></a>')
           .attr("href", "round-scores.html?game=" + encodeURIComponent(g.id)));
+      }
+      if (g.winner && onDeleteGame) {
+        var $delete = $('<button type="button" class="secondary-content icon-action delete-action" title="Delete game" aria-label="Delete game"><i class="material-icons">delete</i></button>');
+        $delete.on("click", function () {
+          onDeleteGame(g);
+        });
+        $li.append($delete);
       }
       $list.append($li);
     });
@@ -191,6 +198,26 @@
     }
   }
 
+  function deleteGame(game) {
+    if (!window.confirm("Delete this game? Its scores and statistics will be removed from all participating players.")) return;
+    try {
+      TichuPlayers.deleteGame(game.id);
+      renderAll();
+    } catch (err) {
+      window.alert(err.message);
+    }
+  }
+
+  function deleteSession(session, gameCount) {
+    if (!window.confirm("Delete this session and its " + gameCount + " game" + (gameCount === 1 ? "" : "s") + "? All related scores and statistics will be removed from participating players.")) return;
+    try {
+      TichuPlayers.deleteSession(session.id);
+      renderAll();
+    } catch (err) {
+      window.alert(err.message);
+    }
+  }
+
   function renderActiveSessionPanel(session) {
     var $panel = $("#session-panel").empty();
     var games = TichuPlayers.getSessionGames(session.id);
@@ -244,12 +271,17 @@
         $('<strong></strong>').text("Session · " + fmtDate(s.startedAt)),
         $('<span class="helper-text"></span>').text(games.length + " game" + (games.length === 1 ? "" : "s") + " · " + fmtDuration(stats.durationMs))
       );
+      var $deleteSession = $('<button type="button" class="session-delete-action btn-flat red-text"><i class="material-icons">delete</i>Delete session</button>');
+      $deleteSession.on("click", function (e) {
+        e.stopPropagation();
+        deleteSession(s, games.length);
+      });
       var $detail = $('<div class="history-detail hidden"></div>');
       $detail.append($('<p class="helper-text"></p>').text(s.playerIds.map(playerName).join(" · ")));
       renderLeaderboard($detail, stats.leaderboard);
-      if (games.length) $detail.append(renderGamesList(games));
+      if (games.length) $detail.append(renderGamesList(games, deleteGame));
       $summary.on("click", function () { $detail.toggleClass("hidden"); });
-      $li.append($summary, $detail);
+      $li.append($summary, $deleteSession, $detail);
       $list.append($li);
     });
   }
@@ -271,7 +303,7 @@
     $panel.append("<h6>Standings</h6>");
     renderLeaderboard($panel, stats.leaderboard);
     $panel.append("<h6>Game history</h6>");
-    $panel.append(games.length ? renderGamesList(games) : '<p class="helper-text">No completed games yet.</p>');
+    $panel.append(games.length ? renderGamesList(games, deleteGame) : '<p class="helper-text">No completed games yet.</p>');
   }
 
   function renderAll() {

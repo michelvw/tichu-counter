@@ -7342,12 +7342,38 @@ min-height: 48px;
 .game-row > span {
 padding-right: 12px;
 }
+.game-row > span:first-child {
+flex: 1;
+}
+.game-row .icon-action {
+background: transparent;
+border: 0;
+color: #999;
+cursor: pointer;
+flex-shrink: 0;
+padding: 8px;
+}
+.game-row .icon-action:hover,
+.game-row .delete-action:hover {
+color: var(--danger);
+}
 .history-summary {
 cursor: pointer;
 display: flex;
 flex-direction: column;
 gap: 3px;
 padding: 4px 0;
+}
+.session-delete-action {
+align-items: center;
+display: inline-flex;
+font-size: .8rem;
+margin-top: 4px;
+padding: 0;
+}
+.session-delete-action .material-icons {
+font-size: 18px;
+margin-right: 4px;
 }
 .history-summary:hover {
 color: #ee6e73;

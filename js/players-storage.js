@@ -730,6 +730,34 @@
     setCurrentGameId(null);
   }
 
+  function deleteGame(id) {
+    var game = getGame(id);
+    if (!game) throw new Error("Game not found.");
+
+    writeJSON(KEYS.GAMES, getGames().filter(function (g) { return g.id !== id; }));
+    if (getCurrentGameId() === id) {
+      setCurrentGameId(null);
+      if (global.TichuStorage) global.TichuStorage.resetGame();
+    }
+    return game;
+  }
+
+  function deleteSession(id) {
+    var session = getSession(id);
+    if (!session) throw new Error("Session not found.");
+
+    var deletedGameIds = getSessionGames(id).map(function (g) { return g.id; });
+    writeJSON(KEYS.GAMES, getGames().filter(function (g) {
+      return g.sessionId !== id;
+    }));
+    writeJSON(KEYS.SESSIONS, getSessions().filter(function (s) { return s.id !== id; }));
+    if (deletedGameIds.indexOf(getCurrentGameId()) !== -1) {
+      setCurrentGameId(null);
+      if (global.TichuStorage) global.TichuStorage.resetGame();
+    }
+    return session;
+  }
+
   function resetStatistics() {
     // Clear accumulated history while keeping the player roster itself.
     writeJSON(KEYS.SESSIONS, []);
@@ -779,5 +807,7 @@
     recordRound: recordRound,
     finishGame: finishGame,
     discardCurrentGame: discardCurrentGame,
+    deleteGame: deleteGame,
+    deleteSession: deleteSession,
   };
 })(window);
