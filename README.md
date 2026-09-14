@@ -2,6 +2,8 @@
 
 A modern Progressive Web App for scoring games of **Tichu**.
 
+Use at: https://michelvw.github.io/tichu-counter/
+
 Originally forked from the excellent work by Bernhard Kainz, this version has grown into a complete game-night companion with player management, sessions, statistics, history tracking, score visualisation, and offline support.
 
 ## Features
