@@ -703,6 +703,23 @@ nav ul a[data-label]::after {
   line-height: 1;
   text-transform: uppercase;
   color: inherit;
+  opacity: 1;
+  visibility: visible;
+  transition: opacity 120ms ease, visibility 120ms ease;
+}
+/* Captions are useful as persistent labels on touch screens, where hover
+   is unavailable. On mouse interfaces they stay out of the way until the
+   action is hovered or keyboard-focused. */
+@media (hover: hover) and (pointer: fine) {
+  nav ul a[data-label]::after {
+    opacity: 0;
+    visibility: hidden;
+  }
+  nav ul a[data-label]:hover::after,
+  nav ul a[data-label]:focus-visible::after {
+    opacity: 1;
+    visibility: visible;
+  }
 }
 #win-threshold-button {
   margin: 13px 6px;
