@@ -28,6 +28,7 @@
     <link rel="manifest" href="manifest.json">
     <meta name="theme-color" content="#0f9d6b">
     <meta name="mobile-web-app-capable" content="yes">
+    <link rel="icon" type="image/svg+xml" href="dragon-icon.svg">
 
     <link rel="canonical" href="https://michelvw.github.io/tichu-counter/" />
 
@@ -45,10 +46,10 @@
     <nav>
       <div class="nav-wrapper">
         <ul id="nav-mobile" class="left">
-          <li><a href="#" id="undo" data-label="Undo" aria-label="Undo last round" title="Undo last round"><i class="material-icons">undo</i></a></li>
-          <li><a href="#" id="reset" data-label="Reset" aria-label="Reset the game" title="Reset the game"><i class="material-icons">replay</i></a></li>
-          <li><a href="round-scores.html" id="round-scores" data-label="Scores" aria-label="Round scores" title="Round scores"><i class="material-icons">list</i></a></li>
-          <li><a href="sessions.html" id="sessions-link" data-label="Sessions" aria-label="Sessions" title="Sessions"><i class="material-icons">group</i></a></li>
+          <li><a href="#" id="undo" data-label="Undo" aria-label="Undo last round" title="Undo last round"><i class="material-icons" aria-hidden="true">undo</i></a></li>
+          <li><a href="#" id="reset" data-label="Reset" aria-label="Reset the game" title="Reset the game"><i class="material-icons" aria-hidden="true">replay</i></a></li>
+          <li><a href="round-scores.html" id="round-scores" data-label="Scores" aria-label="Round scores" title="Round scores"><i class="material-icons" aria-hidden="true">list</i></a></li>
+          <li><a href="sessions.html" id="sessions-link" data-label="Sessions" aria-label="Sessions" title="Sessions"><i class="material-icons" aria-hidden="true">group</i></a></li>
         </ul>
         <ul id="nav-mobile-right" class="right">
           <li><a href="#" id="win-threshold-button">Win: 500</a></li>
@@ -56,7 +57,7 @@
       </div>
     </nav>
     <div class="info-bar">
-      <span id="round-counter">Round 1</span>
+      <span id="round-counter" aria-live="polite">Round 1</span>
       <!-- Shown only while scoring a game that belongs to a session (as
            opposed to a plain Quick Game). Kept inline with the round
            counter rather than as its own bar, so it doesn't compete for
@@ -72,7 +73,7 @@
          without Quick Game ever being blocked or gated. -->
     <div id="mode-hint" class="hidden">
       <span>Tracking players across a game night? <a href="sessions.html">Start a Session</a> instead.</span>
-      <a href="#" id="mode-hint-close"><i class="material-icons">close</i></a>
+      <a href="#" id="mode-hint-close"><i class="material-icons" aria-hidden="true">close</i></a>
     </div>
 
     <!-- Custom panel for setting the win threshold. Deliberately not using
@@ -85,15 +86,16 @@
       <a href="#!" class="win-threshold-option" data-value="750">750</a>
       <a href="#!" class="win-threshold-option" data-value="1000">1000</a>
       <div class="custom-threshold">
-        <input type="number" id="customWinThreshold" inputmode="numeric" min="50" step="50" placeholder="Custom..." />
-      </div>
+          <input type="number" id="customWinThreshold" inputmode="numeric" min="50" step="50" placeholder="Custom..." />
+          <a href="#" id="customWinThresholdApply" class="waves-effect waves-light btn">Apply</a>
+        </div>
     </div>
 
     <!-- Shown when a team's total crosses the win threshold -->
-    <div id="win-banner" class="hidden">
+    <div id="win-banner" class="hidden" aria-live="assertive">
       <span id="win-banner-text"></span>
       <a href="#" id="win-banner-finish" class="hidden">Next Game</a>
-      <a href="#" id="win-banner-close"><i class="material-icons">close</i></a>
+      <a href="#" id="win-banner-close"><i class="material-icons" aria-hidden="true">close</i></a>
     </div>
 
     <section id="game-progress" aria-label="Progress towards the game goal">      

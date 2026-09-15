@@ -708,6 +708,17 @@
     saveGame(game);
   }
 
+  // Removes the most recently recorded round from a game's record.
+  // Mirrors recordRound for the scoreboard's Undo action, letting an undo
+  // in session mode also unwind the session's stored history, chart and
+  // statistics.
+  function unrecordRound(gameId) {
+    var game = getGame(gameId);
+    if (!game) return;
+    game.rounds.pop();
+    saveGame(game);
+  }
+
   function finishGame(gameId, winner, finalScores) {
     var game = getGame(gameId);
     if (!game) throw new Error("Game not found.");
@@ -765,11 +776,9 @@
     setCurrentGameId(null);
 
     // Also clear the active quick-game snapshot so a fresh board isn't
-    // carrying hidden leftover totals from test data.
-    localStorage.removeItem("A_points");
-    localStorage.removeItem("B_points");
-    localStorage.removeItem("roundScores");
-    localStorage.removeItem("roundNumber");
+    // carrying hidden leftover totals from test data. Reuse TichuStorage's
+    // resetGame() so the localStorage keys stay defined in exactly one place.
+    if (global.TichuStorage) global.TichuStorage.resetGame();
   }
 
   global.TichuPlayers = {
@@ -805,6 +814,7 @@
     getCurrentGame: getCurrentGame,
     startNewGameInSession: startNewGameInSession,
     recordRound: recordRound,
+    unrecordRound: unrecordRound,
     finishGame: finishGame,
     discardCurrentGame: discardCurrentGame,
     deleteGame: deleteGame,

@@ -807,3 +807,27 @@ nav ul a[data-label]::after {
   padding-right: 4px;
   background-image: none;
 }
+/* ---- round-scores: horizontal scroll on narrow screens -------------------- */
+
+.table-scroll {
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+}
+.table-scroll table {
+  min-width: 560px;
+}
+
+/* ---- win threshold panel: explicit Apply action -------------------------- */
+
+.custom-threshold {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+#customWinThreshold {
+  flex: 1;
+  min-width: 0;
+}
+#customWinThresholdApply {
+  white-space: nowrap;
+}

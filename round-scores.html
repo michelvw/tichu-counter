@@ -26,6 +26,7 @@
 
     <link rel="manifest" href="manifest.json">
     <meta name="theme-color" content="#0f9d6b">
+    <link rel="icon" type="image/svg+xml" href="dragon-icon.svg">
     <meta name="mobile-web-app-capable" content="yes">
 
     <link rel="canonical" href="https://michelvw.github.io/tichu-counter/" />
@@ -43,11 +44,11 @@
     <nav>
       <div class="nav-wrapper">
         <ul id="nav-mobile" class="left">
-          <li><a href="index.html" id="back" data-label="Back" aria-label="Back to scoreboard" title="Back to scoreboard"><i class="material-icons">arrow_back</i></a></li>
-          <li><a href="#" id="toggle-view" data-label="View" aria-label="Toggle table and chart view" title="Toggle table / chart"><i class="material-icons">show_chart</i></a></li>
-          <li class="graph-only-btn hidden"><a href="#" id="toggle-chips" data-label="Labels" aria-label="Toggle chart labels" title="Toggle chart labels"><i class="material-icons">visibility</i></a></li>
-          <li class="graph-only-btn hidden"><a href="#" id="share-graph" data-label="Share" aria-label="Share chart" title="Share chart"><i class="material-icons">share</i></a></li>
-          <li><a href="sessions.html" id="sessions-link" data-label="Sessions" aria-label="Sessions" title="Sessions"><i class="material-icons">group</i></a></li>
+          <li><a href="index.html" id="back" data-label="Back" aria-label="Back to scoreboard" title="Back to scoreboard"><i class="material-icons" aria-hidden="true">arrow_back</i></a></li>
+          <li><a href="#" id="toggle-view" data-label="View" aria-label="Toggle table and chart view" title="Toggle table / chart"><i class="material-icons" aria-hidden="true">show_chart</i></a></li>
+          <li class="graph-only-btn hidden"><a href="#" id="toggle-chips" data-label="Labels" aria-label="Toggle chart labels" title="Toggle chart labels"><i class="material-icons" aria-hidden="true">visibility</i></a></li>
+          <li class="graph-only-btn hidden"><a href="#" id="share-graph" data-label="Share" aria-label="Share chart" title="Share chart"><i class="material-icons" aria-hidden="true">share</i></a></li>
+          <li><a href="sessions.html" id="sessions-link" data-label="Sessions" aria-label="Sessions" title="Sessions"><i class="material-icons" aria-hidden="true">group</i></a></li>
         </ul>
       </div>
     </nav>
@@ -60,6 +61,7 @@
       <div class="row">
         <!-- Table -->
         <div class="" id="table-container">
+          <div class="table-scroll">
           <table id="round-scores" class="striped">
             <thead>
               <!-- Top row with merged columns -->
@@ -83,6 +85,7 @@
               <!-- Scores will be dynamically added here -->
             </tbody>
           </table>
+          </div>
         </div>
 
         <!-- Graph -->

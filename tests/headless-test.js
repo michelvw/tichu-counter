@@ -21,12 +21,16 @@
     // Ensure SW script is accessible
     const swText = await page.evaluate(() => fetch('/service-worker.js').then(r => r.text()));
 
+    // Read the current cache name out of the service worker itself, so this
+    // assertion can't silently go stale the next time the version is bumped.
+    const cacheMatch = swText.match(/CACHE_NAME\s*=\s*"([^"]+)"/);
+    const cacheTarget = cacheMatch ? cacheMatch[1] : null;
+
     // Check caches in page context.
-    const cacheReport = await page.evaluate(async () => {
+    const cacheReport = await page.evaluate(async (target) => {
       try {
         const cacheNames = await caches.keys();
-        const target = 'tichu-counter-v12';
-        const hasCache = cacheNames.indexOf(target) !== -1;
+        const hasCache = !!target && cacheNames.indexOf(target) !== -1;
         let hasChart = false;
         let hasPlugin = false;
         if (hasCache) {
@@ -51,9 +55,10 @@
       } catch (err) {
         return { error: err.message };
       }
-    });
+    }, cacheTarget);
 
     console.log('Service worker file size:', swText.length);
+    console.log('Expected cache name:', cacheTarget);
     console.log('Cache report:', cacheReport);
 
     // 2) Programmatically test 5-player session rotation fairness by

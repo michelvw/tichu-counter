@@ -75,6 +75,7 @@ function tichuPlainCode(html) {
 }
 
 // Populate the table with round scores
+let tableRows = "";
 roundScores.forEach((round, index) => {
   // Calculate points for the current round
   const teamAPoints = index === 0 ? round.teamA : round.teamA - roundScores[index - 1].teamA;
@@ -91,7 +92,7 @@ roundScores.forEach((round, index) => {
       <td>${round.teamBTichu}</td>
     </tr>
   `;
-  tableBody.innerHTML += row;
+  tableRows += row;
 
   // Add data for the graph
   labels.push(`${index + 1}`);
@@ -102,6 +103,8 @@ roundScores.forEach((round, index) => {
   teamATichuCodes.push(tichuPlainCode(round.teamATichu));
   teamBTichuCodes.push(tichuPlainCode(round.teamBTichu));
 });
+
+tableBody.innerHTML = tableRows;
 
 // --- Auto-scale the Y axis to the actual score range ---
 // Instead of forcing the axis to start at 0 (which wastes space and

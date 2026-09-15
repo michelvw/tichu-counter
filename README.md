@@ -84,6 +84,20 @@ python -m http.server 8000
 Then open <http://localhost:8000> in your browser. You can use any static
 file server instead of Python's built-in server.
 
+## Run the tests
+
+Optional end-to-end checks run against a local server with [Puppeteer](https://pptr.dev) (Node.js required):
+
+```bash
+cd tests
+npm install
+python -m http.server 8000 &
+node headless-test.js            # service worker caching + rotation fairness
+node scoreboard-interaction-test.js  # undo / reset / win-threshold behavior
+```
+
+The tests expect the app to be reachable at <http://localhost:8000>.
+
 ## Technology
 
 - HTML, CSS, and vanilla JavaScript

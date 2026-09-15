@@ -13,6 +13,11 @@
   $(function() {
     init();
 
+    // The +/- stepper links are icon-only; give them accessible names so
+    // screen-reader users get the same affordance as a tapping player.
+    $('.adding-points .minus').attr('aria-label', 'Decrease points by 5');
+    $('.adding-points .plus').attr('aria-label', 'Increase points by 5');
+
     // Assign points
     $('.adding-points .minus').click(function() {
       var parentId = $(this).parents('.card').attr('id');
@@ -56,15 +61,55 @@
         TichuStorage.setRoundNumber(roundNumber);
         $('#round-counter').text('Round ' + roundNumber);
         $('#win-banner').addClass('hidden');
+        // Persist the restored totals - earlier versions only fixed the
+        // in-memory object, so a reload after Undo resurrected the
+        // pre-undo points and duped rounds.
+        TichuStorage.setPoints('A', data['A'].points);
+        TichuStorage.setPoints('B', data['B'].points);
+        // A reset history entry is a full-board snapshot, so simply
+        // restoring it brings the entire previous game back. A round entry
+        // needs roundScores trimmed back to match as well - earlier
+        // versions forgot this, leaving a phantom round in the history
+        // table after an undo.
+        TichuStorage.setRoundScores(prev.roundScores || []);
+        if (sessionMode && currentGame && !prev.isReset &&
+            typeof TichuPlayers !== 'undefined' && TichuPlayers.unrecordRound) {
+          // Session games also record each round in the session's game
+          // record; undo one of those too so the session's history, chart
+          // and statistics stay in sync with the live scoreboard.
+          TichuPlayers.unrecordRound(currentGame.id);
+        }
         updateSessionRoundDisplay();
+        if (typeof M !== 'undefined' && M.toast) {
+          M.toast({ html: prev.isReset ? 'Reset undone - previous game restored' : 'Last round undone', displayLength: 2500 });
+        }
       }
       return update();
     });
     $('#btn-next').click(nextRound);
    
     $('#reset').click(function() {
-      if (sessionMode && !window.confirm('This session\'s game is still in progress. Reset the scoreboard anyway?')) {
-        return;
+      // Resetting wipes the whole board (round history + both scores), so
+      // ask first - in Quick Game too, not just session mode. On confirm a
+      // full-board snapshot is left on the history stack, so a mistap can
+      // still be corrected with the Undo button.
+      var isFreshBoard = !sessionMode && roundNumber === 1 &&
+        TichuStorage.getRoundScores().length === 0 &&
+        data['A'].points === 0 && data['B'].points === 0;
+
+      if (!isFreshBoard) {
+        var message = sessionMode
+          ? 'This session\'s game is still in progress. Reset the scoreboard anyway?'
+          : 'Reset the whole game? The round history and both teams\' scores will be cleared.';
+        if (!window.confirm(message)) {
+          return;
+        }
+        history.push({
+          data: $.extend(true, {}, data),
+          roundNumber: roundNumber,
+          roundScores: TichuStorage.getRoundScores().slice(),
+          isReset: true
+        });
       }
 
       // Clear the data object
@@ -78,10 +123,13 @@
       // Reset points displayed on the game page
       $('#A .points').text(0);
       $('#B .points').text(0);
-      console.log("Totals reset to 0.");
 
-      // Reset round counter and clear any win banner
-      history = [];
+      // Reset round counter and clear any win banner. A fresh board has
+      // nothing to undo; otherwise keep the snapshot pushed above so the
+      // first Undo restores the whole previous game.
+      if (isFreshBoard) {
+        history = [];
+      }
       roundNumber = 1;
       $('#round-counter').text('Round 1');
       $('#win-banner').addClass('hidden');
@@ -98,6 +146,9 @@
 
       // Update the UI to reflect the reset totals
       update();
+      if (typeof M !== 'undefined' && M.toast) {
+        M.toast({ html: 'Game reset - use Undo to restore it', displayLength: 2500 });
+      }
     });
 
     // Win threshold panel: open/close on button click, close on outside click
@@ -123,16 +174,33 @@
       update();
     });
 
-    // Win threshold: custom value field at the bottom of the panel
-    $('#customWinThreshold').on('change', function() {
-      var value = parseInt($(this).val());
+    // Win threshold: custom value field at the bottom of the panel.
+    // Applied explicitly via the Apply button (or Enter), so a typed
+    // value is never silently committed by an accidental blur, nor
+    // silently dropped when the panel closes.
+    function applyCustomWinThreshold() {
+      var value = parseInt($('#customWinThreshold').val(), 10);
       if (!isNaN(value) && value > 0) {
         winThreshold = value;
         TichuStorage.setWinThreshold(winThreshold);
         $('#win-threshold-button').text('Win: ' + winThreshold);
+        $('#customWinThreshold').val('');
         update();
+        if (typeof M !== 'undefined' && M.toast) {
+          M.toast({ html: 'Win threshold set to ' + winThreshold, displayLength: 2000 });
+        }
       }
       $('#winThresholdPanel').addClass('hidden');
+    }
+    $('#customWinThresholdApply').click(function(e) {
+      e.preventDefault();
+      applyCustomWinThreshold();
+    });
+    $('#customWinThreshold').on('keydown', function(e) {
+      if (e.key === 'Enter') {
+        e.preventDefault();
+        applyCustomWinThreshold();
+      }
     });
     // Prevent a click inside the panel (e.g. on the input) from
     // bubbling up to the document handler above and closing it early.
@@ -332,7 +400,11 @@
   };
 
   nextRound = function() {
-    history.push({ data: $.extend(true, {}, data), roundNumber: roundNumber });
+    history.push({
+      data: $.extend(true, {}, data),
+      roundNumber: roundNumber,
+      roundScores: TichuStorage.getRoundScores().slice()
+    });
     let ref = ['A', 'B'];
 
     // Remember pre-round totals so we can tell if this round is what
@@ -375,8 +447,6 @@
       teamBTichu: teamBTichu 
     });
 
-    console.log("Round scores saved:", roundScores);
-
     // Save to localStorage
     TichuStorage.setRoundScores(roundScores);
 
@@ -398,7 +468,6 @@
     // Save updated totals to localStorage
     TichuStorage.setPoints('A', data['A'].points);
     TichuStorage.setPoints('B', data['B'].points);
-    console.log("Updated totals saved to localStorage:", data['A'].points, data['B'].points);
 
     // Advance the round counter
     roundNumber++;
@@ -468,6 +537,5 @@
   $('#btn-round-scores').click(function() {
     TichuStorage.setPoints('A', data['A'].points);
     TichuStorage.setPoints('B', data['B'].points);
-    console.log("Scores saved to localStorage:", data['A'].points, data['B'].points);
   });
 }).call(this);
