@@ -18,6 +18,8 @@
  * session's first (previewLineupForSession).
  * Phase 4 adds: statistics -- per-player-per-session, per-session
  * (leaderboard + duration), and per-player all-time aggregates.
+ * Phase 5 adds: the dealer of each round (shown on the scoreboard and in
+ * the round history), chosen fairly across the session.
  *
  * Storage is plain localStorage/JSON for now, structured so it maps
  * cleanly onto the players/sessions/games/rounds shape in the
@@ -238,6 +240,104 @@
     // Fixed mode (also the fallback for legacy games saved before the
     // `mode` field existed, which only ever had `teams`).
     return { teamA: game.teams[0], teamB: game.teams[1], sittingOut: null };
+  }
+
+  // ---- Dealer of each round ---------------------------------------------
+  // Session games show who deals the hand being scored. The dealer for the
+  // round currently in play is stored on the game record as
+  // `nextDealerPlayerId` -- picked when the game starts, then advanced by
+  // recordRound() every time a round is recorded -- so it survives page
+  // reloads, and Undo can simply restore it from the popped round.
+  //
+  // Selection rules, in priority order:
+  //  1. A player who sits out that round never deals (candidates are only
+  //     the round's active players, from getRoundLineup).
+  //  2. The dealing team alternates every round -- and across games, so
+  //     each new game starts with the opposite team of the last deal.
+  //  3. Deal counts stay as even as possible across the session: among the
+  //     eligible players, whoever has dealt the fewest times wins, with
+  //     ties going to whoever dealt longest ago (or never dealt yet),
+  //     which is what keeps the dealer rotating.
+
+  // Every recorded round of a session in chronological order (games are
+  // stored in creation order, rounds within them in playback order).
+  function sessionRoundsInOrder(sessionId) {
+    var entries = [];
+    getSessionGames(sessionId).forEach(function (g) {
+      (g.rounds || []).forEach(function (r) {
+        entries.push({ game: g, round: r });
+      });
+    });
+    return entries;
+  }
+
+  function sessionDealCounts(sessionId) {
+    var session = getSession(sessionId);
+    var counts = {};
+    session.playerIds.forEach(function (pid) { counts[pid] = 0; });
+    sessionRoundsInOrder(sessionId).forEach(function (entry) {
+      var dealerId = entry.round.dealerPlayerId;
+      if (dealerId && counts[dealerId] !== undefined) counts[dealerId]++;
+    });
+    return counts;
+  }
+
+  // Ordered list of dealer ids across the whole session, used for the
+  // "longest since last deal" tie-break above.
+  function sessionDealerHistory(sessionId) {
+    var history = [];
+    sessionRoundsInOrder(sessionId).forEach(function (entry) {
+      if (entry.round.dealerPlayerId) history.push(entry.round.dealerPlayerId);
+    });
+    return history;
+  }
+
+  // The dealer of the most recently recorded round in the session, or null
+  // (used as the "previous dealer" when starting a brand-new game).
+  function lastRecordedDealer(sessionId) {
+    var history = sessionDealerHistory(sessionId);
+    return history.length ? history[history.length - 1] : null;
+  }
+
+  // Picks who deals the upcoming round. `lineup` is the round's active
+  // players (see getRoundLineup), so anyone sitting out is already out of
+  // contention. `prevDealerId` is the dealer of the round just completed
+  // (or, for a fresh game, the previous game's last dealer).
+  function pickDealerForRound(game, lineup, prevDealerId, counts, history) {
+    var active = lineup.teamA.concat(lineup.teamB);
+    var opposite = null;
+    if (prevDealerId && playerSide(game, prevDealerId)) {
+      opposite = playerSide(game, prevDealerId) === "A" ? "B" : "A";
+    }
+    var candidates = opposite
+      ? active.filter(function (id) { return playerSide(game, id) === opposite; })
+      : active.slice();
+    if (!candidates.length) candidates = active.slice();
+
+    candidates.sort(function (a, b) {
+      var diff = (counts[a] || 0) - (counts[b] || 0);
+      if (diff !== 0) return diff;
+      var recentA = history.lastIndexOf(a);
+      var recentB = history.lastIndexOf(b);
+      if (recentA !== recentB) return recentA - recentB;
+      return a < b ? -1 : 1;
+    });
+    return candidates[0];
+  }
+
+  // The dealer currently assigned to the round in play (stored on the game
+  // record), or null if not known (e.g. a game started before Phase 5).
+  function getCurrentRoundDealer(game) {
+    return game ? (game.nextDealerPlayerId || null) : null;
+  }
+
+  // The dealer recorded for a specific round of a (possibly finished) game,
+  // for history views; null when not known.
+  function getRoundDealerPlayerId(gameId, roundNumber) {
+    var game = getGame(gameId);
+    if (!game || !game.rounds) return null;
+    var round = game.rounds[roundNumber - 1];
+    return round ? (round.dealerPlayerId || null) : null;
   }
 
   function pairKey(a, b) {
@@ -696,6 +796,16 @@
       game.fixedTeam = finalLineup.fixedTeam;
       game.pool = finalLineup.pool;
     }
+    // Pick the dealer for round 1 so the scoreboard can show it straight
+    // away. The starting team flips relative to the previous game's last
+    // dealer, keeping team alternation continuous across the session.
+    game.nextDealerPlayerId = pickDealerForRound(
+      game,
+      getRoundLineup(game, 1),
+      lastRecordedDealer(sessionId),
+      sessionDealCounts(sessionId),
+      sessionDealerHistory(sessionId)
+    );
     saveGame(game);
     setCurrentGameId(game.id);
     return game;
@@ -705,6 +815,19 @@
     var game = getGame(gameId);
     if (!game) return;
     game.rounds.push(round);
+    // The round we just recorded is history now; if it names its dealer,
+    // schedule the next round's dealer too (active player, alternating
+    // team, balanced session counts).
+    if (round.dealerPlayerId && getSession(game.sessionId)) {
+      var nextRoundNumber = game.rounds.length + 1;
+      game.nextDealerPlayerId = pickDealerForRound(
+        game,
+        getRoundLineup(game, nextRoundNumber),
+        round.dealerPlayerId,
+        sessionDealCounts(game.sessionId),
+        sessionDealerHistory(game.sessionId)
+      );
+    }
     saveGame(game);
   }
 
@@ -715,7 +838,12 @@
   function unrecordRound(gameId) {
     var game = getGame(gameId);
     if (!game) return;
-    game.rounds.pop();
+    var popped = game.rounds.pop();
+    // Undo also rewinds the dealer pointer: the round we're back on is the
+    // one that was just removed, so its dealer must be shown again.
+    if (popped && popped.dealerPlayerId) {
+      game.nextDealerPlayerId = popped.dealerPlayerId;
+    }
     saveGame(game);
   }
 
@@ -794,6 +922,8 @@
     previewLineup: previewLineup,
     previewLineupForSession: previewLineupForSession,
     getRoundLineup: getRoundLineup,
+    getCurrentRoundDealer: getCurrentRoundDealer,
+    getRoundDealerPlayerId: getRoundDealerPlayerId,
     computePlayerSessionStats: computePlayerSessionStats,
     computeSessionStats: computeSessionStats,
     computePlayerAllTimeStats: computePlayerAllTimeStats,

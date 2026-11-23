@@ -342,8 +342,13 @@
   // reflect it in Team B's name + the info-bar session tag. For a
   // fixed-team (4-player) game this is the same every round; for a
   // rotation (5-player) game it changes as the pool rotates who sits out.
+  // Also surfaces who deals this round.
   function updateSessionRoundDisplay() {
     if (!sessionMode || !currentGame) return;
+    // Re-fetch the game record so the dealer pointer and round list
+    // reflect the latest recorded round (recordRound/unrecordRound write
+    // timestamp-first to storage, so the closure snapshot goes stale).
+    currentGame = TichuPlayers.getGame(currentGame.id) || currentGame;
     var lineup = TichuPlayers.getRoundLineup(currentGame, roundNumber);
     var teamAName = TichuPlayers.teamNameString(lineup.teamA);
     // In a 5-player rotation game, Team B is the full pool even though
@@ -365,6 +370,19 @@
     }
     $('#session-tag-text').text(label);
     $('#session-tag').removeClass('hidden');
+
+    // Dealer of this round: always one of the four active players, from
+    // the opposite team to the previous round's dealer (required teams
+    // alternate, also across games). Only session games know who's who,
+    // so quick games never show this tag.
+    var dealerId = TichuPlayers.getCurrentRoundDealer(currentGame);
+    if (dealerId) {
+      var dealer = TichuPlayers.getPlayer(dealerId);
+      $('#dealer-tag-text').text('Dealer: ' + (dealer ? dealer.name : '?'));
+      $('#dealer-tag').removeClass('hidden');
+    } else {
+      $('#dealer-tag').addClass('hidden');
+    }
   }
 
   update = function() {
@@ -462,6 +480,7 @@
         teamADoubleWin: data['A'].doubleWin,
         teamBDoubleWin: data['B'].doubleWin,
         sittingOutPlayerId: roundLineup.sittingOut,
+        dealerPlayerId: TichuPlayers.getCurrentRoundDealer(currentGame),
       });
     }
 

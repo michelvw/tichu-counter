@@ -48,6 +48,29 @@ if (historyGame) {
   thresholdOrFinalText = "Win: " + TichuStorage.getWinThreshold();
 }
 
+// Dealer names only exist for session games, where player identities are
+// known. The history view reads them straight from the finished game
+// record; the live view mirrors the board from the in-progress session
+// game's stored rounds (recordRound keeps them in lockstep with the
+// scoreboard). Quick Games and pre-dealer games simply leave the column
+// empty, and it is hidden below when there is nothing to show.
+let roundDealerIds = [];
+if (historyGame) {
+  roundDealerIds = (historyGame.rounds || []).map((r) => r.dealerPlayerId || null);
+} else if (typeof TichuPlayers !== "undefined" && TichuPlayers.getCurrentGame) {
+  const liveGame = TichuPlayers.getCurrentGame();
+  if (liveGame && liveGame.rounds) {
+    roundDealerIds = liveGame.rounds.map((r) => r.dealerPlayerId || null);
+  }
+}
+const anyDealers = roundDealerIds.some((id) => !!id);
+function dealerNameFor(roundIndex) {
+  const id = roundDealerIds[roundIndex];
+  if (!id || typeof TichuPlayers === "undefined") return "";
+  const player = TichuPlayers.getPlayer(id);
+  return player ? player.name : "(removed player)";
+}
+
 document.getElementById("round-counter-display").textContent = roundCounterText;
 document.getElementById("win-threshold-display").textContent = thresholdOrFinalText;
 
@@ -90,6 +113,7 @@ roundScores.forEach((round, index) => {
       <td>${round.teamB}</td> <!-- Total Points for Team B -->
       <td>${teamBPoints}</td> <!-- Points for Team B -->
       <td>${round.teamBTichu}</td>
+      <td class="dealer-cell">${dealerNameFor(index)}</td>
     </tr>
   `;
   tableRows += row;
@@ -105,6 +129,13 @@ roundScores.forEach((round, index) => {
 });
 
 tableBody.innerHTML = tableRows;
+
+// The Dealer column only means something when player identities are
+// available (session games); collapse it out of plain Quick Game and
+// legacy pre-dealer tables so they don't show a gap of empty cells.
+if (!anyDealers) {
+  document.querySelectorAll(".dealer-col, .dealer-cell").forEach((el) => el.classList.add("hidden"));
+}
 
 // --- Auto-scale the Y axis to the actual score range ---
 // Instead of forcing the axis to start at 0 (which wastes space and

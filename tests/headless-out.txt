@@ -1,0 +1,20 @@
+Service worker file size: 3273
+Expected cache name: tichu-counter-v26
+Cache report: {
+  cacheNames: [ 'tichu-counter-v26' ],
+  hasCache: true,
+  hasChart: true,
+  hasPlugin: true
+}
+Rotation report: {
+  sessionId: 's_mwtayferfs8ne',
+  poolCounts: {
+    p_mwtayfer97a3f: 5,
+    p_mwtayferaq05j: 6,
+    p_mwtayfer6gfec: 7,
+    p_mwtayferd23vn: 6,
+    p_mwtayfer5f83g: 6
+  },
+  totalGames: 6
+}
+Balanced pool participation (max-min +Û‘«¶-Ò 2)? true

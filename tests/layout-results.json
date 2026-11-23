@@ -1,0 +1,226 @@
+[
+  {
+    "error": null,
+    "viewport": 320,
+    "scaled": false,
+    "sameRow": false,
+    "overlap": false,
+    "containerWidth": 288,
+    "btnWidths": [
+      288,
+      288
+    ],
+    "labels": [
+      {
+        "text": "View details",
+        "ellipsized": false,
+        "fullyVisible": true,
+        "clientW": 65,
+        "scrollW": 65
+      },
+      {
+        "text": "End session",
+        "ellipsized": false,
+        "fullyVisible": true,
+        "clientW": 62,
+        "scrollW": 62
+      }
+    ]
+  },
+  {
+    "error": null,
+    "viewport": 360,
+    "scaled": false,
+    "sameRow": false,
+    "overlap": false,
+    "containerWidth": 324,
+    "btnWidths": [
+      324,
+      324
+    ],
+    "labels": [
+      {
+        "text": "View details",
+        "ellipsized": false,
+        "fullyVisible": true,
+        "clientW": 65,
+        "scrollW": 65
+      },
+      {
+        "text": "End session",
+        "ellipsized": false,
+        "fullyVisible": true,
+        "clientW": 62,
+        "scrollW": 62
+      }
+    ]
+  },
+  {
+    "error": null,
+    "viewport": 361,
+    "scaled": false,
+    "sameRow": true,
+    "overlap": false,
+    "containerWidth": 325,
+    "btnWidths": [
+      158,
+      158
+    ],
+    "labels": [
+      {
+        "text": "View details",
+        "ellipsized": false,
+        "fullyVisible": true,
+        "clientW": 65,
+        "scrollW": 65
+      },
+      {
+        "text": "End session",
+        "ellipsized": false,
+        "fullyVisible": true,
+        "clientW": 62,
+        "scrollW": 62
+      }
+    ]
+  },
+  {
+    "error": null,
+    "viewport": 375,
+    "scaled": false,
+    "sameRow": true,
+    "overlap": false,
+    "containerWidth": 338,
+    "btnWidths": [
+      165,
+      165
+    ],
+    "labels": [
+      {
+        "text": "View details",
+        "ellipsized": false,
+        "fullyVisible": true,
+        "clientW": 65,
+        "scrollW": 65
+      },
+      {
+        "text": "End session",
+        "ellipsized": false,
+        "fullyVisible": true,
+        "clientW": 62,
+        "scrollW": 62
+      }
+    ]
+  },
+  {
+    "error": null,
+    "viewport": 390,
+    "scaled": false,
+    "sameRow": true,
+    "overlap": false,
+    "containerWidth": 351,
+    "btnWidths": [
+      172,
+      172
+    ],
+    "labels": [
+      {
+        "text": "View details",
+        "ellipsized": false,
+        "fullyVisible": true,
+        "clientW": 65,
+        "scrollW": 65
+      },
+      {
+        "text": "End session",
+        "ellipsized": false,
+        "fullyVisible": true,
+        "clientW": 62,
+        "scrollW": 62
+      }
+    ]
+  },
+  {
+    "error": null,
+    "viewport": 414,
+    "scaled": false,
+    "sameRow": true,
+    "overlap": false,
+    "containerWidth": 373,
+    "btnWidths": [
+      182,
+      182
+    ],
+    "labels": [
+      {
+        "text": "View details",
+        "ellipsized": false,
+        "fullyVisible": true,
+        "clientW": 65,
+        "scrollW": 65
+      },
+      {
+        "text": "End session",
+        "ellipsized": false,
+        "fullyVisible": true,
+        "clientW": 62,
+        "scrollW": 62
+      }
+    ]
+  },
+  {
+    "error": null,
+    "viewport": 320,
+    "scaled": true,
+    "sameRow": false,
+    "overlap": false,
+    "containerWidth": 288,
+    "btnWidths": [
+      288,
+      288
+    ],
+    "labels": [
+      {
+        "text": "View details",
+        "ellipsized": false,
+        "fullyVisible": true,
+        "clientW": 65,
+        "scrollW": 65
+      },
+      {
+        "text": "End session",
+        "ellipsized": false,
+        "fullyVisible": true,
+        "clientW": 62,
+        "scrollW": 62
+      }
+    ]
+  },
+  {
+    "error": null,
+    "viewport": 375,
+    "scaled": true,
+    "sameRow": true,
+    "overlap": false,
+    "containerWidth": 338,
+    "btnWidths": [
+      165,
+      165
+    ],
+    "labels": [
+      {
+        "text": "View details",
+        "ellipsized": false,
+        "fullyVisible": true,
+        "clientW": 65,
+        "scrollW": 65
+      },
+      {
+        "text": "End session",
+        "ellipsized": false,
+        "fullyVisible": true,
+        "clientW": 62,
+        "scrollW": 62
+      }
+    ]
+  }
+]

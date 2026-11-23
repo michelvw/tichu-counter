@@ -1,0 +1,7 @@
+After 2 rounds: {"roundScores":2,"pointsA":105,"pointsB":95,"round":3}
+After undo round 2: {"roundScores":1,"pointsA":50,"pointsB":50,"round":2}
+After reset: {"roundScores":0,"pointsA":0,"pointsB":0,"round":1}
+After undo of reset: {"roundScores":1,"pointsA":50,"pointsB":50,"round":2}
+Threshold applied: {"winThreshold":750,"buttonText":"Win: 750"}
+Threshold via Enter: {"winThreshold":1000,"buttonText":"Win: 1000"}
+Scoreboard interaction checks passed? true

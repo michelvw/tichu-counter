@@ -1,0 +1,4 @@
+Dealer report (5-player rotation): {"playerCount":5,"rounds":24,"counts":{"p_mwtaxr1sggktt":5,"p_mwtaxr1t77dqz":5,"p_mwtaxr1txdg2k":4,"p_mwtaxr1thrlzz":5,"p_mwtaxr1tma7ye":5},"min":4,"max":5}
+Dealer report (4-player fixed): {"playerCount":4,"rounds":30,"counts":{"p_mwtaxr258s2pu":7,"p_mwtaxr25bha75":8,"p_mwtaxr258ccsa":7,"p_mwtaxr257dsjn":8},"min":7,"max":8}
+5-player deal counts balanced (max-min <= 2)? true
+4-player deal counts balanced (max-min <= 1)? true

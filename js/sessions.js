@@ -32,18 +32,130 @@
     return obj.teams[0].map(playerName).join(" & ") + " vs " + obj.teams[1].map(playerName).join(" & ");
   }
 
-  function renderLeaderboard($container, leaderboard) {
-    var $list = $('<ol class="collection leaderboard-list"></ol>');
-    leaderboard.forEach(function (row, i) {
-      var $li = $('<li class="collection-item"></li>');
-      $li.append($('<span class="leaderboard-rank"></span>').text("#" + (i + 1)));
-      $li.append($('<span class="leaderboard-name"></span>').text(row.playerName));
-      $li.append($('<span class="secondary-content leaderboard-points"></span>').text(
-        row.totalPoints + " pts · " + row.gamesWon + "/" + row.gamesPlayed + " won"
-      ));
-      $list.append($li);
+  // Per-session player statistics, mirroring the all-time ranking on the
+  // players page: a ranking grid of the session's players plus a
+  // "Sort ranking by" dropdown. The sort options are the same as
+  // players.html, but computed from per-session stats; the chosen sort is
+  // remembered under its own key so it doesn't clash with the all-time
+  // ranking preference.
+  var SESSION_RANKING_SORT_KEY = "tichuSessionRankingSort";
+  var SESSION_RANKING_OPTIONS = [
+    {
+      id: "totalPoints",
+      label: "Total points",
+      getValue: function (stats) { return stats.totalPoints; },
+      format: function (value) { return value + " pts"; }
+    },
+    {
+      id: "bestGameScore",
+      label: "Best game points",
+      getValue: function (stats) { return stats.bestGameScore; },
+      format: function (value) { return value + " pts"; }
+    },
+    {
+      id: "winRate",
+      label: "Win rate",
+      getValue: function (stats) { return stats.winPct; },
+      format: function (value, stats) {
+        return value + "% (" + stats.gamesWon + "/" + stats.gamesPlayed + ")";
+      }
+    },
+    {
+      id: "averagePoints",
+      label: "Point average",
+      getValue: function (stats) { return stats.avgPointsPerGame; },
+      format: function (value) { return value + " pts"; }
+    },
+    {
+      id: "doubleWins",
+      label: "Double wins",
+      getValue: function (stats) { return stats.doubleWins; },
+      format: function (value) { return value; }
+    },
+    {
+      id: "grandTichuNet",
+      label: "Grand Tichu",
+      getValue: function (stats) { return stats.grandTichuWon - stats.grandTichuLost; },
+      format: function (value, stats) {
+        return value + " (" + stats.grandTichuWon + "W minus " + stats.grandTichuLost + "L)";
+      }
+    },
+    {
+      id: "tichuNet",
+      label: "Tichu",
+      getValue: function (stats) { return stats.tichuWon - stats.tichuLost; },
+      format: function (value, stats) {
+        return value + " (" + stats.tichuWon + "W minus " + stats.tichuLost + "L)";
+      }
+    }
+  ];
+
+  function getSessionRankingOption() {
+    var selectedId = localStorage.getItem(SESSION_RANKING_SORT_KEY);
+    return SESSION_RANKING_OPTIONS.filter(function (option) {
+      return option.id === selectedId;
+    })[0] || SESSION_RANKING_OPTIONS[0];
+  }
+
+  function renderPlayerSessionStats($container, session) {
+    var selectId = "session-ranking-sort-" + session.id;
+
+    var $section = $('<section class="stats-section session-player-stats"></section>');
+    $section.append('<h5>Player statistics</h5>');
+
+    var $list = $('<ol class="collection ranking-list"></ol>');
+    var $sort = $('<div class="ranking-sort"></div>').append(
+      $('<label></label>').attr("for", selectId).text("Sort ranking by"),
+      $('<select></select>').attr("id", selectId).addClass("browser-default")
+    );
+
+    SESSION_RANKING_OPTIONS.forEach(function (option) {
+      $sort.find("select").append($("<option></option>").val(option.id).text(option.label));
     });
-    $container.append($list);
+    $sort.find("select").val(getSessionRankingOption().id);
+
+    function renderRanking() {
+      var option = getSessionRankingOption();
+      var ranked = session.playerIds.map(function (pid) {
+        var stats = TichuPlayers.computePlayerSessionStats(pid, session.id);
+        var p = TichuPlayers.getPlayer(pid);
+        return {
+          playerId: pid,
+          name: p ? p.name : "(removed player)",
+          stats: stats,
+          value: stats.gamesPlayed ? option.getValue(stats) : null
+        };
+      }).sort(function (a, b) {
+        if (a.value === null && b.value === null) return a.name.localeCompare(b.name);
+        if (a.value === null) return 1;
+        if (b.value === null) return -1;
+        if (b.value !== a.value) return b.value - a.value;
+        return a.name.localeCompare(b.name);
+      });
+
+      $list.empty();
+      ranked.forEach(function (entry, index) {
+        var value = entry.value === null ? "\u2014" : option.format(entry.value, entry.stats);
+        var $li = $('<li class="collection-item ranking-row"></li>');
+        var $row = $('<a class="ranking-row-link" title="View statistics"></a>')
+          .attr("href", "player-stats.html?id=" + encodeURIComponent(entry.playerId));
+        $row.append($('<span class="ranking-position"></span>').text(index + 1));
+        $row.append($('<span class="ranking-player-name"></span>').text(entry.name));
+        $row.append($('<strong class="ranking-value"></strong>').text(value));
+        $li.append($row);
+        $list.append($li);
+      });
+    }
+
+    $sort.find("select").on("change", function () {
+      localStorage.setItem(SESSION_RANKING_SORT_KEY, $(this).val());
+      renderRanking();
+    });
+
+    renderRanking();
+    $section.append($list);
+    $section.append($sort);
+    $container.append($section);
   }
 
   function teamCard(label, ids) {
@@ -249,7 +361,7 @@
       });
     }
 
-    $panel.append('<div class="session-actions session-actions-secondary"><a href="session-details.html" class="waves-effect waves-light btn-flat"><i class="material-icons left">insights</i>View details</a><a href="#" id="end-session-btn" class="waves-effect waves-light btn-flat red-text"><i class="material-icons left">stop</i>End session</a></div>');
+    $panel.append('<div class="session-actions session-actions-secondary"><a href="session-details.html" class="waves-effect waves-light btn-flat"><i class="material-icons left">assessment</i><span class="btn-label">View details</span></a><a href="#" id="end-session-btn" class="waves-effect waves-light btn-flat red-text"><i class="material-icons left">stop</i><span class="btn-label">End session</span></a></div>');
     $("#end-session-btn").on("click", function (e) {
       e.preventDefault();
       endSession(session);
@@ -278,7 +390,7 @@
       });
       var $detail = $('<div class="history-detail hidden"></div>');
       $detail.append($('<p class="helper-text"></p>').text(s.playerIds.map(playerName).join(" · ")));
-      renderLeaderboard($detail, stats.leaderboard);
+      renderPlayerSessionStats($detail, s);
       if (games.length) $detail.append(renderGamesList(games, deleteGame));
       $summary.on("click", function () { $detail.toggleClass("hidden"); });
       $li.append($summary, $deleteSession, $detail);
@@ -290,7 +402,7 @@
     var $panel = $("#session-details-panel").empty();
     var session = TichuPlayers.getActiveOrPausedSession();
     if (!session) {
-      $panel.append('<div class="empty-state"><i class="material-icons">insights</i><p>No active session.</p><a href="sessions.html" class="btn">Back to sessions</a></div>');
+      $panel.append('<div class="empty-state"><i class="material-icons">info</i><p>No active session.</p><a href="sessions.html" class="btn">Back to sessions</a></div>');
       return;
     }
     var games = TichuPlayers.getSessionGames(session.id);
@@ -300,8 +412,7 @@
     $summary.append($('<div><span class="stats-label">Games played</span><strong></strong></div>').find("strong").text(games.filter(function (g) { return g.winner; }).length).end());
     $summary.append($('<div><span class="stats-label">Duration</span><strong></strong></div>').find("strong").text(fmtDuration(stats.durationMs)).end());
     $panel.append($summary);
-    $panel.append("<h6>Standings</h6>");
-    renderLeaderboard($panel, stats.leaderboard);
+    renderPlayerSessionStats($panel, session);
     $panel.append("<h6>Game history</h6>");
     $panel.append(games.length ? renderGamesList(games, deleteGame) : '<p class="helper-text">No completed games yet.</p>');
   }

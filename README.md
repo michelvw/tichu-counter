@@ -34,14 +34,16 @@ Sessions keep multiple games and their results together:
 - Create a session for four or five players.
 - Generate teams while reducing repeated pairings.
 - Rotate the sitting-out player fairly in five-player sessions.
+- Indicate who deals each hand, rotating the deal fairly so a sitting-out
+  player never deals and the dealing team alternates every round.
 - Start and finish multiple games without losing the session history.
-- Review standings, completed games, and session statistics later.
+- Review session statistics, completed games, and player rankings later.
 
 ![Create a session](screenshots/session%20new.jpg?raw=true "Create a session")
 
 ![Active session](screenshots/sessions%20active.jpg?raw=true "Active session")
 
-![Session details and standings](screenshots/session%20details.jpg?raw=true "Session details and standings")
+![Session details and statistics](screenshots/session%20details.jpg?raw=true "Session details and statistics")
 
 ### Manage players and statistics
 
@@ -94,6 +96,7 @@ npm install
 python -m http.server 8000 &
 node headless-test.js            # service worker caching + rotation fairness
 node scoreboard-interaction-test.js  # undo / reset / win-threshold behavior
+node dealer-rotation-test.js         # dealer fairness / alternation / sit-out skip
 ```
 
 The tests expect the app to be reachable at <http://localhost:8000>.
@@ -115,7 +118,7 @@ The tests expect the app to be reachable at <http://localhost:8000>.
 | `round-scores.html` | Round history and charts |
 | `sessions.html` | Session setup and active sessions |
 | `session-history.html` | Completed session history |
-| `session-details.html` | Session standings and game details |
+| `session-details.html` | Session statistics and game details |
 | `players.html` | Player roster management |
 | `player-stats.html` | Individual player statistics |
 | `js/` | Application logic and bundled front-end dependencies |

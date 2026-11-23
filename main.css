@@ -6866,6 +6866,20 @@ align-items: center;
 #session-tag.hidden {
 display: none;
 }
+/* Dealer-of-the-round tag, same family as the session tag above: shown
+   only while scoring a session game and kept just as understated so it
+   doesn't compete with the scores themselves. */
+#dealer-tag {
+color: #999;
+font-weight: normal;
+display: inline-flex;
+align-items: center;
+}
+/* Same specificity dance as #session-tag.hidden: the element's own
+   display:inline-flex outranks the generic .hidden class. */
+#dealer-tag.hidden {
+display: none;
+}
 #teamAName[readonly], #teamBName[readonly] {
 background-color: transparent;
 border-bottom-style: dashed;
@@ -7022,6 +7036,13 @@ margin-bottom: 12px;
 #session-panel .btn-flat {
 margin: 4px 8px 12px 0;
 }
+/* Buttons inside .session-actions opt out of the panel-level button margin;
+   without this the higher-specificity rule above squeezes and misaligns the
+   side-by-side actions row on narrow screens. */
+#session-panel .session-actions .btn,
+#session-panel .session-actions .btn-flat {
+margin: 0;
+}
 #pick-status {
 font-weight: bold;
 color: #555;
@@ -7052,29 +7073,8 @@ background-color: #fff3e0;
 
 /* --- Phase 4: statistics --- */
 
-.leaderboard-list {
-counter-reset: none;
-}
-.leaderboard-list .collection-item {
-display: flex;
-align-items: center;
-}
-.leaderboard-rank {
-font-weight: bold;
-color: #999;
-width: 28px;
-flex-shrink: 0;
-}
-.leaderboard-name {
-flex: 1;
-}
-.leaderboard-points {
-font-size: 0.85rem;
-color: #666;
-}
-
-/* Session history rows expand in place to show duration + leaderboard
-   on tap, instead of navigating to a separate detail page. */
+/* Session history rows expand in place to show duration + player
+   statistics on tap, instead of navigating to a separate detail page. */
 .history-summary {
 cursor: pointer;
 }
@@ -7225,6 +7225,18 @@ margin: 28px auto 0;
 font-size: .8rem;
 }
 
+/* Per-session player statistics shown on the session details / history
+   views. Mirrors the all-time ranking on the players page: a ranking
+   grid of the session's players plus a "Sort ranking by" dropdown. The
+   grid rows reuse the shared .ranking-* styles from the players page. */
+.session-player-stats {
+margin-top: 28px;
+}
+.session-player-stats h5 {
+font-size: 1.15rem;
+margin: 0 0 12px;
+}
+
 /* --- mobile-first session flows --- */
 .sessions-page {
 max-width: 620px;
@@ -7269,7 +7281,7 @@ display: flex;
 justify-content: center;
 align-items: center;
 gap: 8px;
-flex-wrap: nowrap;
+flex-wrap: wrap;
 width: 100%;
 }
 .session-actions-secondary .btn,
@@ -7297,6 +7309,14 @@ justify-content: center;
 margin-right: 6px;
 margin-left: 0;
 flex-shrink: 0;
+}
+/* The label is wrapped in a span so text-overflow ellipsis actually works:
+   as a direct text node inside an inline-flex button it would only hard-clip. */
+.session-actions-secondary .btn-label {
+min-width: 0;
+overflow: hidden;
+white-space: nowrap;
+text-overflow: ellipsis;
 }
 .session-status-card,
 .session-summary-card {
@@ -7413,5 +7433,16 @@ margin: 8px auto 20px;
     justify-content: center;
     align-items: center;
     gap: 8px;
+  }
+}
+/* On very narrow phones (or with large system font scaling) the two
+   side-by-side action buttons cannot both fit their icon + label, so stack
+   them full-width to keep every label fully readable. */
+@media (max-width: 360px) {
+  .session-actions-secondary .btn,
+  .session-actions-secondary .btn-flat {
+    flex-basis: 100%;
+    width: 100%;
+    max-width: 100%;
   }
 }

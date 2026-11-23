@@ -1,0 +1,148 @@
+[
+  {
+    "stage": "historical-seed",
+    "histExpected": {
+      "completedGames": 2,
+      "p1Stats": {
+        "gamesPlayed": 2,
+        "gamesWon": 1,
+        "gamesLost": 1,
+        "winPct": 50,
+        "totalPoints": 195,
+        "avgPointsPerGame": 98,
+        "bestGameScore": 100,
+        "tichuWon": 1,
+        "tichuLost": 0,
+        "grandTichuWon": 1,
+        "grandTichuLost": 0,
+        "doubleWins": 1
+      }
+    }
+  },
+  {
+    "stage": "history-ui",
+    "histUi": {
+      "heading": "Player statistics",
+      "hasOldStandings": false,
+      "sort": {
+        "label": "Sort ranking by",
+        "value": "totalPoints",
+        "options": [
+          "Total points",
+          "Best game points",
+          "Win rate",
+          "Point average",
+          "Double wins",
+          "Grand Tichu",
+          "Tichu"
+        ],
+        "rows": [
+          {
+            "pos": "1",
+            "name": "P2",
+            "value": "220 pts"
+          },
+          {
+            "pos": "2",
+            "name": "P4",
+            "value": "205 pts"
+          },
+          {
+            "pos": "3",
+            "name": "P1",
+            "value": "195 pts"
+          },
+          {
+            "pos": "4",
+            "name": "P3",
+            "value": "180 pts"
+          }
+        ]
+      }
+    }
+  },
+  {
+    "stage": "history-sort-winRate",
+    "histSorted": {
+      "label": "Sort ranking by",
+      "value": "winRate",
+      "options": [
+        "Total points",
+        "Best game points",
+        "Win rate",
+        "Point average",
+        "Double wins",
+        "Grand Tichu",
+        "Tichu"
+      ],
+      "rows": [
+        {
+          "pos": "1",
+          "name": "P2",
+          "value": "100% (2/2)"
+        },
+        {
+          "pos": "2",
+          "name": "P1",
+          "value": "50% (1/2)"
+        },
+        {
+          "pos": "3",
+          "name": "P4",
+          "value": "50% (1/2)"
+        },
+        {
+          "pos": "4",
+          "name": "P3",
+          "value": "0% (0/2)"
+        }
+      ]
+    }
+  },
+  {
+    "stage": "active-details-ui",
+    "actUi": {
+      "heading": "Player statistics",
+      "hasOldStandings": false,
+      "sort": {
+        "label": "Sort ranking by",
+        "value": "winRate",
+        "options": [
+          "Total points",
+          "Best game points",
+          "Win rate",
+          "Point average",
+          "Double wins",
+          "Grand Tichu",
+          "Tichu"
+        ],
+        "rows": [
+          {
+            "pos": "1",
+            "name": "Alice",
+            "value": "100% (1/1)"
+          },
+          {
+            "pos": "2",
+            "name": "Bob",
+            "value": "100% (1/1)"
+          },
+          {
+            "pos": "3",
+            "name": "Carol",
+            "value": "0% (0/1)"
+          },
+          {
+            "pos": "4",
+            "name": "Dave",
+            "value": "0% (0/1)"
+          }
+        ]
+      }
+    }
+  },
+  {
+    "stage": "page-errors",
+    "pageErrors": []
+  }
+]
