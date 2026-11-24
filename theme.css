@@ -528,6 +528,9 @@ table thead th {
   border-top: 3px solid var(--team-color);
 }
 .three-team-score strong, .three-team-score span { display: block; }
+.three-team-score > span:first-child {
+  min-height: 3em;
+}
 .three-team-score-value {
   display: flex;
   justify-content: center;
@@ -889,6 +892,9 @@ nav ul a[data-label]::after {
 }
 .row.add-player-row .input-field {
   margin-top: 0;
+}
+#add-player-btn {
+  margin-bottom: 8px;
 }
 
 .btn,
