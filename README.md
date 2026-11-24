@@ -20,8 +20,9 @@ after installation, and stores data locally on your device.
 
 ### Review the score
 
-Open the round summary at any time to review the complete game as a table or
-chart. The chart can show labels and can be shared as an image.
+Open the round summary at any time to review the complete game. The chart
+opens by default; switch to the table using the toolbar. The chart can show
+labels and can be shared as an image.
 
 ![Score progression chart](screenshots/score%20graph.jpg?raw=true "Score progression chart")
 
@@ -31,13 +32,23 @@ chart. The chart can show labels and can be shared as an image.
 
 Sessions keep multiple games and their results together:
 
-- Create a session for four or five players.
+- Create a session for four, five, or six players.
 - Generate teams while reducing repeated pairings.
 - Rotate the sitting-out player fairly in five-player sessions.
+- In six-player sessions, play in three pairs: two pairs play each round
+  while the third sits out, and each pair's score, progress, and points
+  remaining are shown.
 - Indicate who deals each hand, rotating the deal fairly so a sitting-out
   player never deals and the dealing team alternates every round.
 - Start and finish multiple games without losing the session history.
 - Review session statistics, completed games, and player rankings later.
+
+For six players, the game ends as soon as one pair has the highest score
+and reaches the target. If the highest score is tied at or above the target,
+play continues until there is a sole leader. A game can end before all pairs
+have played the same number of rounds. Starting a new game reshuffles pairs,
+favoring less-repeated partnerships, and chooses the first resting pair
+using previous sit-outs.
 
 ![Create a session](screenshots/session%20new.jpg?raw=true "Create a session")
 
@@ -97,9 +108,11 @@ python -m http.server 8000 &
 node headless-test.js            # service worker caching + rotation fairness
 node scoreboard-interaction-test.js  # undo / reset / win-threshold behavior
 node dealer-rotation-test.js         # dealer fairness / alternation / sit-out skip
+node six-player-test.js              # three-team rotation, scoring and history
 ```
 
-The tests expect the app to be reachable at <http://localhost:8000>.
+The first three tests expect the app at <http://localhost:8000>. The
+six-player test starts its own server on an available local port.
 
 ## Technology
 

@@ -41,6 +41,7 @@
   --team-b: #2f74c0;          /* readable azure on light */
   --team-b-fill: #3d8ee0;
   --team-b-soft: rgba(61, 142, 224, 0.16);
+  --team-c: #8753ae;
 
   --danger: #d64545;
 
@@ -79,6 +80,7 @@
     --team-b: #5aa9f2;
     --team-b-fill: #5aa9f2;
     --team-b-soft: rgba(90, 169, 242, 0.15);
+    --team-c: #c594e5;
 
     --danger: #f2685f;
 
@@ -512,6 +514,56 @@ table thead th {
 #team-a-header { color: var(--team-a); }
 #team-b-header { color: var(--team-b); }
 
+#three-team-scores {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 6px;
+  margin: 8px 10px 2px;
+}
+#three-team-scores.hidden { display: none; }
+#win-banner-close.hidden { display: none; }
+.three-team-score {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  padding: 8px;
+  text-align: center;
+  overflow-wrap: anywhere;
+  border-top: 3px solid var(--team-color);
+}
+.three-team-score strong, .three-team-score span { display: block; }
+.three-team-score-value {
+  display: flex;
+  justify-content: center;
+  align-items: baseline;
+  flex-wrap: wrap;
+  column-gap: 6px;
+}
+.three-team-score strong { font-size: 1.3rem; color: var(--team-color); }
+.three-team-score .remaining-label { color: var(--text-muted); font-size: 0.75rem; }
+.three-team-progress {
+  height: 7px;
+  margin: 6px 0;
+  border-radius: var(--radius-pill);
+  background-color: var(--surface-3);
+  overflow: hidden;
+}
+.three-team-progress-fill {
+  height: 100%;
+  border-radius: inherit;
+  background-color: var(--team-color);
+}
+.three-team-score .resting-label { color: var(--text-muted); font-size: 0.75rem; }
+.team-index-0 { --team-color: var(--team-a); }
+.team-index-1 { --team-color: var(--team-b); }
+.team-index-2 { --team-color: var(--team-c); }
+body.three-team-mode .card#A,
+body.three-team-mode .card#B { border-top-color: var(--team-color); }
+body.three-team-mode .card#A .card-content .points,
+body.three-team-mode .card#B .card-content .points { color: var(--team-color); }
+#round-scores .team-c-column { background-color: rgba(144, 90, 190, 0.16); }
+#round-scores th.team-c-column { color: var(--team-c); }
+
 #chart-wrapper {
   background-color: var(--surface);
   border: 1px solid var(--border);
@@ -590,6 +642,9 @@ table thead th {
 }
 .teams-preview .team-preview-card:last-child {
   border-top: 3px solid var(--team-b);
+}
+.teams-preview .team-preview-card[class*="team-index-"] {
+  border-top: 3px solid var(--team-color);
 }
 
 /* -------------------------------------------------------- statistics UI --- */

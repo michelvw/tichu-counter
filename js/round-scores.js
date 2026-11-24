@@ -6,6 +6,9 @@
 // (table, graph, sharing) works unchanged either way.
 const historyGameId = new URLSearchParams(window.location.search).get("game");
 const historyGame = historyGameId && typeof TichuPlayers !== "undefined" ? TichuPlayers.getGame(historyGameId) : null;
+const liveGame = typeof TichuPlayers !== "undefined" ? TichuPlayers.getCurrentGame() : null;
+const sixGame = (historyGame || (!historyGameId && liveGame));
+const threeTeamGame = sixGame && sixGame.mode === "threeTeams" ? sixGame : null;
 
 // Mirrors the exact Tichu-call label convention built in js/script.js's
 // nextRound() (HTML snippet with <s> for a lost call, prefixed with the
@@ -18,9 +21,25 @@ function tichuLabel(mod, doubleWin) {
      mod === -100 ? "<s>T</s>" : "");
 }
 
-let teamAName, teamBName, roundScores, roundCounterText, thresholdOrFinalText;
+let teamAName, teamBName, teamCName, roundScores, roundCounterText, thresholdOrFinalText;
 
-if (historyGame) {
+if (threeTeamGame) {
+  [teamAName, teamBName, teamCName] = threeTeamGame.teams.map((team) => TichuPlayers.teamNameString(team));
+  roundScores = threeTeamGame.rounds.map((r) => ({
+    teamA: r.scores[0], teamB: r.scores[1], teamC: r.scores[2],
+    teamATichu: tichuLabel(r.tichuMods[0], r.doubleWins[0]),
+    teamBTichu: tichuLabel(r.tichuMods[1], r.doubleWins[1]),
+    teamCTichu: tichuLabel(r.tichuMods[2], r.doubleWins[2]),
+    activeTeams: r.activeTeams
+  }));
+  roundCounterText = threeTeamGame.winner
+    ? "Final \u2014 " + roundScores.length + " rounds"
+    : "Round " + (roundScores.length + 1);
+  thresholdOrFinalText = threeTeamGame.finalScores
+    ? "Final: " + [threeTeamGame.finalScores.teamA, threeTeamGame.finalScores.teamB, threeTeamGame.finalScores.teamC].join(" - ")
+    : "Win: " + TichuStorage.getWinThreshold();
+  if (historyGame) document.getElementById("back").href = "sessions.html";
+} else if (historyGame) {
   teamAName = historyGame.mode === "rotation"
     ? TichuPlayers.teamNameString(historyGame.fixedTeam)
     : TichuPlayers.teamNameString(historyGame.teams[0]);
@@ -58,7 +77,6 @@ let roundDealerIds = [];
 if (historyGame) {
   roundDealerIds = (historyGame.rounds || []).map((r) => r.dealerPlayerId || null);
 } else if (typeof TichuPlayers !== "undefined" && TichuPlayers.getCurrentGame) {
-  const liveGame = TichuPlayers.getCurrentGame();
   if (liveGame && liveGame.rounds) {
     roundDealerIds = liveGame.rounds.map((r) => r.dealerPlayerId || null);
   }
@@ -77,6 +95,20 @@ document.getElementById("win-threshold-display").textContent = thresholdOrFinalT
 // Update table headers and labels with team names
 document.getElementById("team-a-header").textContent = teamAName;
 document.getElementById("team-b-header").textContent = teamBName;
+if (threeTeamGame) {
+  const headerRows = document.querySelectorAll("#round-scores thead tr");
+  const teamHeader = document.createElement("th");
+  teamHeader.colSpan = 3;
+  teamHeader.className = "team-c-column";
+  teamHeader.textContent = teamCName;
+  headerRows[0].insertBefore(teamHeader, headerRows[0].lastElementChild);
+  ["Total", "Round", "Tichu"].forEach((label) => {
+    const th = document.createElement("th");
+    th.className = "team-c-column";
+    th.textContent = label;
+    headerRows[1].insertBefore(th, headerRows[1].lastElementChild);
+  });
+}
 
 const tableBody = document.querySelector("#round-scores tbody");
 
@@ -84,10 +116,13 @@ const tableBody = document.querySelector("#round-scores tbody");
 const labels = []; // Round numbers
 const teamAData = []; // Team A cumulative totals
 const teamBData = []; // Team B cumulative totals
+const teamCData = [];
 const teamADelta = []; // Team A round points (this round's gain/loss)
 const teamBDelta = []; // Team B round points
+const teamCDelta = [];
 const teamATichuCodes = []; // Team A Tichu badge text, plain (no HTML)
 const teamBTichuCodes = []; // Team B Tichu badge text, plain (no HTML)
+const teamCTichuCodes = [];
 
 // The table stores Tichu results as small HTML snippets (e.g. with
 // <s> for a lost call). Canvas text can't render HTML, so convert
@@ -108,12 +143,15 @@ roundScores.forEach((round, index) => {
     <tr>
       <td>${index + 1}</td>
       <td>${round.teamA}</td> <!-- Total Points for Team A -->
-      <td>${teamAPoints}</td> <!-- Points for Team A -->
+      <td>${threeTeamGame && !round.activeTeams.includes(0) ? "&mdash;" : teamAPoints}</td> <!-- Points for Team A -->
       <td>${round.teamATichu}</td>
       <td>${round.teamB}</td> <!-- Total Points for Team B -->
-      <td>${teamBPoints}</td> <!-- Points for Team B -->
+      <td>${threeTeamGame && !round.activeTeams.includes(1) ? "&mdash;" : teamBPoints}</td> <!-- Points for Team B -->
       <td>${round.teamBTichu}</td>
-      <td class="dealer-cell">${dealerNameFor(index)}</td>
+      ${threeTeamGame ? `<td class="team-c-column">${round.teamC}</td>
+      <td class="team-c-column">${!round.activeTeams.includes(2) ? "&mdash;" : (index === 0 ? round.teamC : round.teamC - roundScores[index - 1].teamC)}</td>
+      <td class="team-c-column">${round.teamCTichu}</td>` : ""}
+      <td class="dealer-cell"></td>
     </tr>
   `;
   tableRows += row;
@@ -126,9 +164,17 @@ roundScores.forEach((round, index) => {
   teamBDelta.push(teamBPoints);
   teamATichuCodes.push(tichuPlainCode(round.teamATichu));
   teamBTichuCodes.push(tichuPlainCode(round.teamBTichu));
+  if (threeTeamGame) {
+    teamCData.push(round.teamC);
+    teamCDelta.push(index === 0 ? round.teamC : round.teamC - roundScores[index - 1].teamC);
+    teamCTichuCodes.push(tichuPlainCode(round.teamCTichu));
+  }
 });
 
 tableBody.innerHTML = tableRows;
+tableBody.querySelectorAll(".dealer-cell").forEach((cell, index) => {
+  cell.textContent = dealerNameFor(index);
+});
 
 // The Dealer column only means something when player identities are
 // available (session games); collapse it out of plain Quick Game and
@@ -141,7 +187,7 @@ if (!anyDealers) {
 // Instead of forcing the axis to start at 0 (which wastes space and
 // squashes the two lines together when scores are e.g. -120..340),
 // scale to the real min/max of the data with a bit of padding.
-const allScores = [...teamAData, ...teamBData];
+const allScores = [...teamAData, ...teamBData, ...teamCData];
 let yMin = 0;
 let yMax = 100;
 if (allScores.length) {
@@ -300,6 +346,29 @@ const scoreChart = new Chart(ctx, {
     }],
 });
 
+if (threeTeamGame) {
+  scoreChart.data.datasets.push({
+    label: teamCName,
+    data: teamCData,
+    borderColor: "rgba(144, 90, 190, 1)",
+    backgroundColor: "rgba(144, 90, 190, 0.2)",
+    borderWidth: 2,
+    pointRadius: 3,
+    datalabels: {
+      align: "right",
+      anchor: "center",
+      offset: 6,
+      color: "rgba(115, 65, 160, 1)",
+      font: { size: 9, weight: "bold" },
+      backgroundColor: "rgba(255, 255, 255, 0.85)",
+      borderRadius: 4,
+      padding: { top: 2, bottom: 2, left: 4, right: 4 },
+      formatter: (value, dctx) => buildPointLabel(teamCData[dctx.dataIndex], teamCDelta[dctx.dataIndex], teamCTichuCodes[dctx.dataIndex]),
+    }
+  });
+  scoreChart.update();
+}
+
 // Toggle between table and graph
 const toggleButton = document.getElementById("toggle-view");
 const tableContainer = document.getElementById("table-container");
@@ -324,25 +393,35 @@ function syncGraphOnlyButtons() {
   graphOnlyButtons.forEach((el) => el.classList.toggle("hidden", !isGraphActive()));
 }
 
-toggleButton.addEventListener("click", () => {
+toggleButton.addEventListener("click", (event) => {
+  event.preventDefault();
   if (tableContainer.classList.contains("hidden")) {
     tableContainer.classList.remove("hidden");
     graphContainer.classList.add("hidden");
-    toggleButton.innerHTML = '<i class="material-icons">show_chart</i>';
   } else {
     tableContainer.classList.add("hidden");
     graphContainer.classList.remove("hidden");
-    toggleButton.innerHTML = '<i class="material-icons">list</i>';
     // The graph was hidden (display:none) so Chart.js couldn't
     // measure it; nudge a resize now that it's visible.
     requestAnimationFrame(() => scoreChart.resize());
   }
   syncLandscapeClass();
   syncGraphOnlyButtons();
+  syncToggleButton();
 });
+
+function syncToggleButton() {
+  const graphActive = isGraphActive();
+  const label = graphActive ? "Show score table" : "Show score graph";
+  toggleButton.innerHTML = `<i class="material-icons" aria-hidden="true">${graphActive ? "list" : "show_chart"}</i>`;
+  toggleButton.setAttribute("aria-label", label);
+  toggleButton.setAttribute("title", label);
+  toggleButton.setAttribute("data-label", graphActive ? "Table" : "Graph");
+}
 
 syncLandscapeClass();
 syncGraphOnlyButtons();
+syncToggleButton();
 
 // Toggle the on-chart total/delta/Tichu chips on and off
 const chipsToggleButton = document.getElementById("toggle-chips");
@@ -375,7 +454,7 @@ shareButton.addEventListener("click", () => {
         await navigator.share({
           files: [file],
           title: "Tichu Scores",
-          text: `${teamAName} vs ${teamBName}`,
+          text: threeTeamGame ? `${teamAName} vs ${teamBName} vs ${teamCName}` : `${teamAName} vs ${teamBName}`,
         });
       } catch (err) {
         // User cancelled the share sheet, or share failed silently.

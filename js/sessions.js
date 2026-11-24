@@ -25,6 +25,9 @@
   }
 
   function lineupSummary(obj) {
+    if (obj.mode === "threeTeams") {
+      return obj.teams.map(function (team) { return team.map(playerName).join(" & "); }).join(" vs ");
+    }
     if (obj.mode === "rotation") {
       return "Fixed: " + obj.fixedTeam.map(playerName).join(" & ") +
         " · Pool: " + obj.pool.map(playerName).join(", ");
@@ -173,7 +176,11 @@
     }
     $container.empty();
     var $preview = $('<div class="teams-preview"></div>');
-    if (pendingLineup.mode === "fixed") {
+    if (pendingLineup.mode === "threeTeams") {
+      pendingLineup.teams.forEach(function (team, i) {
+        $preview.append(teamCard("Team " + (i + 1), team).addClass("team-index-" + i));
+      });
+    } else if (pendingLineup.mode === "fixed") {
       $preview.append(teamCard("Team 1", pendingLineup.teams[0]));
       $preview.append(teamCard("Team 2", pendingLineup.teams[1]));
     } else {
@@ -184,6 +191,11 @@
     if (pendingLineup.mode === "rotation") {
       $container.append($('<p class="helper-text"></p>').text(
         "One pool player sits out each round so everyone sits out equally often."
+      ));
+    }
+    if (pendingLineup.mode === "threeTeams") {
+      $container.append($('<p class="helper-text"></p>').text(
+        "Two teams play each round while the third sits out. Each team keeps its own score."
       ));
     }
     if (note) $container.append($('<p class="helper-text"></p>').text(note));
@@ -201,7 +213,10 @@
     var $list = $('<ul class="collection games-list"></ul>');
     games.forEach(function (g, i) {
       var label = "Game " + (i + 1);
-      if (g.winner === "A" || g.winner === "B") {
+      if (g.mode === "threeTeams" && ["A", "B", "C"].indexOf(g.winner) !== -1) {
+        label += " \u00b7 won by " + g.teams[["A", "B", "C"].indexOf(g.winner)].map(playerName).join(" & ");
+        if (g.finalScores) label += " (" + [g.finalScores.teamA, g.finalScores.teamB, g.finalScores.teamC].join(" - ") + ")";
+      } else if (g.winner === "A" || g.winner === "B") {
         var winnerLabel = g.mode === "rotation"
           ? (g.winner === "A" ? g.fixedTeam.map(playerName).join(" & ") : g.pool.map(playerName).join(", "))
           : g.teams[g.winner === "A" ? 0 : 1].map(playerName).join(" & ");
@@ -243,7 +258,7 @@
   function renderStartSessionForm() {
     var active = TichuPlayers.getPlayers({ activeOnly: true });
     var $panel = $("#session-panel").empty();
-    $panel.append('<div class="page-heading"><h4>New session</h4><p class="helper-text">Choose 4 or 5 players to get started.</p></div>');
+    $panel.append('<div class="page-heading"><h4>New session</h4><p class="helper-text">Choose 4, 5 or 6 players to get started.</p></div>');
     if (active.length < 4) {
       $panel.append('<div class="empty-state"><i class="material-icons">group</i><p>Add at least 4 players on the <a href="players.html">Players page</a> to start a session.</p></div>');
       return;
@@ -272,8 +287,8 @@
       $(".player-pick").each(function () {
         $(this).closest(".player-pick-row").toggleClass("selected", this.checked);
       });
-      $("#pick-status").text(ids.length + " selected · need 4 or 5");
-      if (ids.length === 4 || ids.length === 5) {
+      $("#pick-status").text(ids.length + " selected · need 4, 5 or 6");
+      if (ids.length >= 4 && ids.length <= 6) {
         $("#start-session-btn").removeClass("disabled");
         renderLineupPreview($("#session-team-preview"), ids);
       } else {
@@ -288,7 +303,7 @@
     $("#start-session-btn").on("click", function (e) {
       e.preventDefault();
       var ids = selectedIds();
-      if (ids.length !== 4 && ids.length !== 5) return;
+      if (ids.length < 4 || ids.length > 6) return;
       try {
         var result = TichuPlayers.startSession({ playerIds: ids, lineup: pendingLineup });
         pendingLineup = null;
@@ -301,7 +316,11 @@
   }
 
   function endSession(session) {
-    if (!window.confirm("End session and discard the current game? Completed games will be kept.")) return;
+    var current = TichuPlayers.getCurrentGame();
+    var message = current && !current.winner
+      ? "End session and discard the current game? Completed games will be kept."
+      : "End session? Completed games will be kept.";
+    if (!window.confirm(message)) return;
     try {
       TichuPlayers.endSession(session.id);
       renderAll();
@@ -337,7 +356,7 @@
     $panel.append('<div class="page-heading"><h4>Current session</h4><p class="helper-text">' +
       session.playerIds.map(playerName).join(" · ") + "</p></div>");
 
-    if (currentGame) {
+    if (currentGame && !currentGame.winner) {
       $panel.append($('<div class="session-status-card"></div>').append(
         $('<span class="status-label">Game in progress</span>'),
         $('<strong></strong>').text(lineupSummary(currentGame)),

@@ -159,9 +159,8 @@
     if (getActiveOrPausedSession()) {
       throw new Error("A session is already active or paused. End it before starting a new one.");
     }
-    // v1/v2: exactly 4 (fixed teams) or 5 (rotating pool) distinct players.
-    if ((playerIds.length !== 4 && playerIds.length !== 5) || new Set(playerIds).size !== playerIds.length) {
-      throw new Error("Sessions need exactly 4 or 5 distinct players in this version.");
+    if ((playerIds.length < 4 || playerIds.length > 6) || new Set(playerIds).size !== playerIds.length) {
+      throw new Error("Sessions need 4, 5 or 6 distinct players.");
     }
     var session = {
       id: makeId("s"),
@@ -191,6 +190,7 @@
   // 5 players -> {mode: 'rotation', fixedTeam: [a,b], pool: [c,d,e]} —
   // one team of 2 always plays; the pool of 3 rotates who sits out
   // each round (see getRoundLineup below).
+  // 6 players -> {mode: 'threeTeams', teams: [[a,b],[c,d],[e,f]]}.
   function previewLineup(playerIds) {
     var shuffled = shuffle(playerIds);
     if (playerIds.length === 4) {
@@ -199,7 +199,10 @@
     if (playerIds.length === 5) {
       return { mode: "rotation", fixedTeam: shuffled.slice(0, 2), pool: shuffled.slice(2, 5) };
     }
-    throw new Error("Sessions support 4 or 5 players in this version.");
+    if (playerIds.length === 6) {
+      return { mode: "threeTeams", teams: [shuffled.slice(0, 2), shuffled.slice(2, 4), shuffled.slice(4, 6)] };
+    }
+    throw new Error("Sessions support 4, 5 or 6 players.");
   }
 
   function sameIdSet(a, b) {
@@ -221,6 +224,12 @@
       if (!lineup.pool || lineup.pool.length !== 3) return false;
       return sameIdSet(playerIds, lineup.fixedTeam.concat(lineup.pool));
     }
+    if (lineup.mode === "threeTeams") {
+      return playerIds.length === 6 && Array.isArray(lineup.teams) &&
+        lineup.teams.length === 3 && lineup.teams.every(function (team) {
+          return Array.isArray(team) && team.length === 2;
+        }) && sameIdSet(playerIds, [].concat.apply([], lineup.teams));
+    }
     return false;
   }
 
@@ -231,6 +240,15 @@
   // round-robin on (roundNumber - 1) % 3, so it cycles evenly no matter
   // how many rounds the game runs.
   function getRoundLineup(game, roundNumber) {
+    if (game.mode === "threeTeams") {
+      var restIndex = (game.firstRestingTeam + roundNumber - 1) % 3;
+      var activeIndices = [0, 1, 2].filter(function (i) { return i !== restIndex; });
+      return {
+        teamA: game.teams[activeIndices[0]], teamB: game.teams[activeIndices[1]],
+        activeIndices: activeIndices, restingTeam: restIndex,
+        sittingOut: game.teams[restIndex]
+      };
+    }
     if (game.mode === "rotation") {
       var idx = (roundNumber - 1) % 3;
       var sittingOut = game.pool[idx];
@@ -306,7 +324,11 @@
   function pickDealerForRound(game, lineup, prevDealerId, counts, history) {
     var active = lineup.teamA.concat(lineup.teamB);
     var opposite = null;
-    if (prevDealerId && playerSide(game, prevDealerId)) {
+    if (game.mode === "threeTeams" && prevDealerId) {
+      var previousTeam = playerSide(game, prevDealerId);
+      var otherTeamPlayers = active.filter(function (id) { return playerSide(game, id) !== previousTeam; });
+      if (otherTeamPlayers.length) active = otherTeamPlayers;
+    } else if (prevDealerId && playerSide(game, prevDealerId)) {
       opposite = playerSide(game, prevDealerId) === "A" ? "B" : "A";
     }
     var candidates = opposite
@@ -369,6 +391,18 @@
     return lineups;
   }
 
+  function sixPlayerLineups(playerIds) {
+    var anchor = playerIds[0];
+    var lineups = [];
+    playerIds.slice(1).forEach(function (partner) {
+      var remaining = playerIds.filter(function (id) { return id !== anchor && id !== partner; });
+      fourPlayerSplits(remaining).forEach(function (split) {
+        lineups.push({ mode: "threeTeams", teams: [[anchor, partner]].concat(split.teams) });
+      });
+    });
+    return lineups;
+  }
+
   // How many times each pair of players has actually played together
   // this session, counted from the session's finished games. Fixed-mode
   // games contribute their two team pairings once each; rotation-mode
@@ -390,6 +424,8 @@
           var active = g.pool.filter(function (id) { return id !== r.sittingOutPlayerId; });
           if (active.length === 2) bump(active[0], active[1]);
         });
+      } else if (g.mode === "threeTeams") {
+        g.teams.forEach(function (team) { bump(team[0], team[1]); });
       } else {
         bump(g.teams[0][0], g.teams[0][1]);
         bump(g.teams[1][0], g.teams[1][1]);
@@ -405,6 +441,9 @@
   // depending on the round).
   function scoreLineup(lineup, counts) {
     function get(a, b) { return counts[pairKey(a, b)] || 0; }
+    if (lineup.mode === "threeTeams") {
+      return lineup.teams.reduce(function (sum, team) { return sum + get(team[0], team[1]); }, 0);
+    }
     if (lineup.mode === "fixed") {
       return get(lineup.teams[0][0], lineup.teams[0][1]) + get(lineup.teams[1][0], lineup.teams[1][1]);
     }
@@ -428,6 +467,14 @@
     var playerIds = session.playerIds;
     var hasPriorGames = getSessionGames(sessionId).some(function (g) { return g.winner; });
     if (!hasPriorGames) return previewLineup(playerIds);
+
+    if (playerIds.length === 6) {
+      var sixCounts = sessionPairingCounts(sessionId);
+      var sixCandidates = sixPlayerLineups(playerIds);
+      var best = Math.min.apply(null, sixCandidates.map(function (lineup) { return scoreLineup(lineup, sixCounts); }));
+      var bestLineups = sixCandidates.filter(function (lineup) { return scoreLineup(lineup, sixCounts) === best; });
+      return { mode: "threeTeams", teams: shuffle(bestLineups[Math.floor(Math.random() * bestLineups.length)].teams) };
+    }
 
     var candidates = playerIds.length === 4 ? fourPlayerSplits(playerIds) : fivePlayerLineups(playerIds);
     var counts = sessionPairingCounts(sessionId);
@@ -533,6 +580,10 @@
   // pool (pool members are only ever on the non-fixed side, whichever
   // round they're actually playing).
   function playerSide(game, playerId) {
+    if (game.mode === "threeTeams") {
+      var index = game.teams.findIndex(function (team) { return team.indexOf(playerId) !== -1; });
+      return index === -1 ? null : ["A", "B", "C"][index];
+    }
     if (game.mode === "rotation") {
       if (game.fixedTeam.indexOf(playerId) !== -1) return "A";
       if (game.pool.indexOf(playerId) !== -1) return "B";
@@ -566,13 +617,24 @@
       if (g.winner === side) stats.gamesWon++;
       else if (g.winner !== "tie") stats.gamesLost++;
 
-      var pts = g.finalScores ? g.finalScores[side === "A" ? "teamA" : "teamB"] : null;
+      var pts = g.finalScores ? g.finalScores["team" + side] : null;
       if (typeof pts === "number") {
         stats.totalPoints += pts;
         if (stats.bestGameScore === null || pts > stats.bestGameScore) stats.bestGameScore = pts;
       }
 
       (g.rounds || []).forEach(function (r) {
+        if (g.mode === "threeTeams") {
+          var teamIndex = ["A", "B", "C"].indexOf(side);
+          if (r.activeTeams.indexOf(teamIndex) === -1) return;
+          var sixMod = r.tichuMods[teamIndex];
+          if (sixMod === 200) stats.grandTichuWon++;
+          else if (sixMod === 100) stats.tichuWon++;
+          else if (sixMod === -200) stats.grandTichuLost++;
+          else if (sixMod === -100) stats.tichuLost++;
+          if (r.doubleWins[teamIndex]) stats.doubleWins++;
+          return;
+        }
         var roundSide = side;
         if (g.mode === "rotation" && g.pool.indexOf(playerId) !== -1) {
           if (r.sittingOutPlayerId === playerId) return; // sat out this round
@@ -697,7 +759,10 @@
     var session = getSession(id);
     if (!session) throw new Error("Session not found.");
     var currentGame = getCurrentGame();
-    if (currentGame && currentGame.sessionId === id) discardCurrentGame();
+    if (currentGame && currentGame.sessionId === id) {
+      if (currentGame.winner) setCurrentGameId(null);
+      else discardCurrentGame();
+    }
     session.status = "ended";
     session.endedAt = Date.now();
     // Close out any still-open pause interval (e.g. the session was
@@ -739,13 +804,13 @@
     else localStorage.removeItem(KEYS.CURRENT_GAME_ID);
   }
 
-  // Returns the in-progress game (no winner yet), or null. Also
-  // self-heals a stale pointer (e.g. game already finished elsewhere).
+  // A finished three-team game remains current until the next game starts,
+  // so its result can be reviewed or undone even after a reload.
   function getCurrentGame() {
     var id = getCurrentGameId();
     if (!id) return null;
     var game = getGame(id);
-    if (!game || game.winner) {
+    if (!game || (game.winner && !game.pendingNextGame)) {
       setCurrentGameId(null);
       return null;
     }
@@ -760,13 +825,15 @@
       saveSession(session);
     }
     if (session.status !== "active") throw new Error("This session cannot start a new game.");
-    if (getCurrentGame()) throw new Error("A game is already in progress for this session.");
+    var current = getCurrentGame();
+    if (current && !current.pendingNextGame) throw new Error("A game is already in progress for this session.");
     // Falls back to a lineup selected by previewLineupForSession if the
     // UI doesn't pass one. That preview already avoids repeat pairings
     // where possible.
     if (lineup && !isValidLineupFor(session.playerIds, lineup)) {
       throw new Error("That lineup doesn't match this session's players.");
     }
+    if (current) setCurrentGameId(null);
 
     var finalLineup = lineup || previewLineupForSession(sessionId);
 
@@ -790,11 +857,26 @@
       endedAt: null,
       rounds: [],
     };
-    if (finalLineup.mode === "fixed") {
+    if (finalLineup.mode === "fixed" || finalLineup.mode === "threeTeams") {
       game.teams = finalLineup.teams;
     } else {
       game.fixedTeam = finalLineup.fixedTeam;
       game.pool = finalLineup.pool;
+    }
+    if (game.mode === "threeTeams") {
+      var rests = {};
+      session.playerIds.forEach(function (id) { rests[id] = 0; });
+      sessionRoundsInOrder(sessionId).forEach(function (entry) {
+        if (entry.game.mode !== "threeTeams") return;
+        var resting = entry.game.teams.filter(function (_, i) { return entry.round.activeTeams.indexOf(i) === -1; })[0];
+        resting.forEach(function (id) { rests[id]++; });
+      });
+      var restScores = game.teams.map(function (team) {
+        return team.reduce(function (sum, id) { return sum + rests[id]; }, 0);
+      });
+      var least = Math.min.apply(null, restScores);
+      var eligible = [0, 1, 2].filter(function (i) { return restScores[i] === least; });
+      game.firstRestingTeam = eligible[Math.floor(Math.random() * eligible.length)];
     }
     // Pick the dealer for round 1 so the scoreboard can show it straight
     // away. The starting team flips relative to the previous game's last
@@ -820,12 +902,18 @@
     // team, balanced session counts).
     if (round.dealerPlayerId && getSession(game.sessionId)) {
       var nextRoundNumber = game.rounds.length + 1;
+      var dealCounts = sessionDealCounts(game.sessionId);
+      var dealerHistory = sessionDealerHistory(game.sessionId);
+      if (game.mode === "threeTeams") {
+        dealCounts[round.dealerPlayerId] = (dealCounts[round.dealerPlayerId] || 0) + 1;
+        dealerHistory.push(round.dealerPlayerId);
+      }
       game.nextDealerPlayerId = pickDealerForRound(
         game,
         getRoundLineup(game, nextRoundNumber),
         round.dealerPlayerId,
-        sessionDealCounts(game.sessionId),
-        sessionDealerHistory(game.sessionId)
+        dealCounts,
+        dealerHistory
       );
     }
     saveGame(game);
@@ -847,14 +935,34 @@
     saveGame(game);
   }
 
+  function restoreGameRounds(gameId, rounds, nextDealerPlayerId) {
+    var game = getGame(gameId);
+    if (!game || game.mode !== "threeTeams" || game.winner) throw new Error("Game cannot be restored.");
+    game.rounds = rounds;
+    game.nextDealerPlayerId = nextDealerPlayerId;
+    saveGame(game);
+  }
+
+  function reopenGame(gameId) {
+    var game = getGame(gameId);
+    if (!game || game.mode !== "threeTeams" || !game.pendingNextGame) throw new Error("Game cannot be reopened.");
+    game.winner = null;
+    game.finalScores = null;
+    game.endedAt = null;
+    game.pendingNextGame = false;
+    saveGame(game);
+    return game;
+  }
+
   function finishGame(gameId, winner, finalScores) {
     var game = getGame(gameId);
     if (!game) throw new Error("Game not found.");
     game.winner = winner || "tie";
     game.finalScores = finalScores || null;
     game.endedAt = Date.now();
+    if (game.mode === "threeTeams") game.pendingNextGame = true;
     saveGame(game);
-    if (getCurrentGameId() === gameId) setCurrentGameId(null);
+    if (!game.pendingNextGame && getCurrentGameId() === gameId) setCurrentGameId(null);
     return game;
   }
 
@@ -945,6 +1053,8 @@
     startNewGameInSession: startNewGameInSession,
     recordRound: recordRound,
     unrecordRound: unrecordRound,
+    restoreGameRounds: restoreGameRounds,
+    reopenGame: reopenGame,
     finishGame: finishGame,
     discardCurrentGame: discardCurrentGame,
     deleteGame: deleteGame,

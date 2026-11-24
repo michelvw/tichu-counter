@@ -54,8 +54,15 @@
 
     // Undo & reset
     $('#undo').click(function() {
+      if (sessionMode && currentGame && currentGame.mode === 'threeTeams' &&
+          !history.length && currentGame.rounds.length) {
+        history.push({ data: $.extend(true, {}, data), roundNumber: roundNumber - 1, roundScores: [] });
+      }
       if (history.length) {
         var prev = history.pop();
+        if (sessionMode && currentGame && currentGame.mode === 'threeTeams' && currentGame.winner) {
+          currentGame = TichuPlayers.reopenGame(currentGame.id);
+        }
         data = prev.data;
         roundNumber = prev.roundNumber;
         TichuStorage.setRoundNumber(roundNumber);
@@ -72,7 +79,9 @@
         // versions forgot this, leaving a phantom round in the history
         // table after an undo.
         TichuStorage.setRoundScores(prev.roundScores || []);
-        if (sessionMode && currentGame && !prev.isReset &&
+        if (sessionMode && currentGame && prev.sixReset) {
+          TichuPlayers.restoreGameRounds(currentGame.id, prev.sixReset.rounds, prev.sixReset.nextDealerPlayerId);
+        } else if (sessionMode && currentGame && !prev.isReset &&
             typeof TichuPlayers !== 'undefined' && TichuPlayers.unrecordRound) {
           // Session games also record each round in the session's game
           // record; undo one of those too so the session's history, chart
@@ -89,6 +98,33 @@
     $('#btn-next').click(nextRound);
    
     $('#reset').click(function() {
+      if (sessionMode && currentGame && currentGame.mode === 'threeTeams') {
+        if (currentGame.winner) {
+          window.alert('Undo the winning round before resetting this game.');
+          return;
+        }
+        if (!currentGame.rounds.length) return;
+        if (!window.confirm('Reset this game? All three scores and rounds will be cleared.')) return;
+        var firstDealer = currentGame.rounds[0].dealerPlayerId;
+        history.push({
+          data: $.extend(true, {}, data), roundNumber: roundNumber,
+          roundScores: TichuStorage.getRoundScores().slice(), isReset: true,
+          sixReset: { rounds: currentGame.rounds.slice(), nextDealerPlayerId: currentGame.nextDealerPlayerId }
+        });
+        TichuPlayers.restoreGameRounds(currentGame.id, [], firstDealer);
+        TichuStorage.resetGame();
+        ['A', 'B'].forEach(function (side) {
+          data[side].currentPoints = 50;
+          data[side].tichuMod = 0;
+          data[side].tichuModText = 'No Tichu';
+          data[side].doubleWin = false;
+        });
+        roundNumber = 1;
+        $('#round-counter').text('Round 1');
+        updateSessionRoundDisplay();
+        update();
+        return;
+      }
       // Resetting wipes the whole board (round history + both scores), so
       // ask first - in Quick Game too, not just session mode. On confirm a
       // full-board snapshot is left on the history stack, so a mistap can
@@ -165,12 +201,15 @@
     // Win threshold: preset options in the panel
     $('.win-threshold-option').click(function(e) {
       e.preventDefault();
+      if (currentGame && currentGame.mode === 'threeTeams' && currentGame.winner) return;
       var value = parseInt($(this).attr('data-value'));
       winThreshold = value;
       TichuStorage.setWinThreshold(winThreshold);
       $('#win-threshold-button').text('Win: ' + winThreshold);
       $('#customWinThreshold').val('');
       $('#winThresholdPanel').addClass('hidden');
+      checkThreeTeamWin();
+      if (sessionMode && currentGame && currentGame.mode === 'threeTeams') updateSessionRoundDisplay();
       update();
     });
 
@@ -179,12 +218,15 @@
     // value is never silently committed by an accidental blur, nor
     // silently dropped when the panel closes.
     function applyCustomWinThreshold() {
+      if (currentGame && currentGame.mode === 'threeTeams' && currentGame.winner) return;
       var value = parseInt($('#customWinThreshold').val(), 10);
       if (!isNaN(value) && value > 0) {
         winThreshold = value;
         TichuStorage.setWinThreshold(winThreshold);
         $('#win-threshold-button').text('Win: ' + winThreshold);
         $('#customWinThreshold').val('');
+        checkThreeTeamWin();
+        if (sessionMode && currentGame && currentGame.mode === 'threeTeams') updateSessionRoundDisplay();
         update();
         if (typeof M !== 'undefined' && M.toast) {
           M.toast({ html: 'Win threshold set to ' + winThreshold, displayLength: 2000 });
@@ -230,10 +272,14 @@
     $('#win-banner-finish').click(function(e) {
       e.preventDefault();
       if (!sessionMode || !currentGame) return;
-      var winner = data['A'].points === data['B'].points ? null :
-        (data['A'].points > data['B'].points ? 'A' : 'B');
       var sessionId = currentGame.sessionId;
-      TichuPlayers.finishGame(currentGame.id, winner, { teamA: data['A'].points, teamB: data['B'].points });
+      if (currentGame.mode !== 'threeTeams') {
+        var winner = data['A'].points === data['B'].points ? null :
+          (data['A'].points > data['B'].points ? 'A' : 'B');
+        TichuPlayers.finishGame(currentGame.id, winner, { teamA: data['A'].points, teamB: data['B'].points });
+      } else if (!currentGame.winner) {
+        return;
+      }
       $('#win-banner').addClass('hidden');
 
       var session = TichuPlayers.getSession(sessionId);
@@ -303,6 +349,11 @@
   }
   if (currentGame) {
     sessionMode = true;
+    if (currentGame.mode === 'threeTeams') {
+      roundNumber = currentGame.rounds.length + 1;
+      TichuStorage.setRoundNumber(roundNumber);
+      $('#round-counter').text('Round ' + roundNumber);
+    }
     $('#teamAName, #teamBName').prop('readonly', true);
     $('#mode-hint').addClass('hidden');
     updateSessionRoundDisplay();
@@ -315,7 +366,9 @@
     // never actually got closed out. Recompute it from the restored
     // points instead of relying on that one-off event.
     var over = ref.filter(function(t) { return data[t].points >= winThreshold; });
-    if (over.length) {
+    if (currentGame.mode === 'threeTeams') {
+      showThreeTeamWinner();
+    } else if (over.length) {
       var overNames = over.map(function(t) {
         return $('#team' + t + 'Name').val() || ('Team ' + t);
       });
@@ -333,6 +386,11 @@
     var freshBoard = roundNumber === 1 && TichuStorage.getRoundScores().length === 0;
     var dismissed = localStorage.getItem('tichuModeHintDismissed') === 'true';
     $('#mode-hint').toggleClass('hidden', !(freshBoard && !dismissed));
+    $('#game-progress').removeClass('hidden');
+    $('#three-team-scores').addClass('hidden');
+    $('body').removeClass('three-team-mode');
+    $('#btn-next').removeClass('disabled').removeAttr('aria-disabled');
+    $('#win-banner-close').removeClass('hidden');
   }
 
   return update();
@@ -349,7 +407,50 @@
     // reflect the latest recorded round (recordRound/unrecordRound write
     // timestamp-first to storage, so the closure snapshot goes stale).
     currentGame = TichuPlayers.getGame(currentGame.id) || currentGame;
-    var lineup = TichuPlayers.getRoundLineup(currentGame, roundNumber);
+    var lineup = TichuPlayers.getRoundLineup(currentGame,
+      currentGame.mode === 'threeTeams' && currentGame.winner ? roundNumber - 1 : roundNumber);
+    var isThreeTeams = currentGame.mode === 'threeTeams';
+    $('body').toggleClass('three-team-mode', isThreeTeams);
+    $('#game-progress').toggleClass('hidden', isThreeTeams);
+    $('#three-team-scores').toggleClass('hidden', !isThreeTeams);
+    if (isThreeTeams) {
+      var scores = threeTeamScores(currentGame);
+      data.A.points = scores[lineup.activeIndices[0]];
+      data.B.points = scores[lineup.activeIndices[1]];
+      ['A', 'B'].forEach(function (side, slot) {
+        $('#' + side).removeClass('team-index-0 team-index-1 team-index-2')
+          .addClass('team-index-' + lineup.activeIndices[slot]);
+      });
+      var $scores = $('#three-team-scores').empty();
+      currentGame.teams.forEach(function (team, index) {
+        var $score = $('<div class="three-team-score"></div>').addClass('team-index-' + index);
+        var teamName = TichuPlayers.teamNameString(team);
+        $score.append($('<span></span>').text(teamName));
+        var remaining = Math.max(winThreshold - scores[index], 0);
+        $score.append($('<div class="three-team-score-value"></div>').append(
+          $('<strong></strong>').text(scores[index]),
+          $('<span class="remaining-label"></span>').text(remaining ? remaining + ' left' : 'Goal reached')
+        ));
+        var goal = Math.max(winThreshold, 1);
+        var progress = Math.max(0, Math.min(scores[index], goal));
+        $score.append($('<div class="three-team-progress" role="progressbar"></div>')
+          .attr({
+            'aria-label': teamName + ' progress',
+            'aria-valuemin': 0,
+            'aria-valuemax': goal,
+            'aria-valuenow': progress,
+            'aria-valuetext': scores[index] + ' points out of ' + winThreshold
+          })
+          .append($('<div class="three-team-progress-fill"></div>').css('width', (progress / goal * 100) + '%')));
+        if (index === lineup.restingTeam) $score.append($('<span class="resting-label"></span>').text(currentGame.winner ? 'Sat out' : 'Sitting out'));
+        $scores.append($score);
+      });
+      $('#btn-next').toggleClass('disabled', !!currentGame.winner)
+        .attr('aria-disabled', currentGame.winner ? 'true' : 'false');
+      $('#win-banner-close').toggleClass('hidden', !!currentGame.winner);
+      $('#round-counter').text(currentGame.winner ? 'Final' : 'Round ' + roundNumber);
+      showThreeTeamWinner();
+    }
     var teamAName = TichuPlayers.teamNameString(lineup.teamA);
     // In a 5-player rotation game, Team B is the full pool even though
     // only two pool members play in any individual round.
@@ -365,9 +466,14 @@
     var gameCount = TichuPlayers.getSessionGames(currentGame.sessionId).length;
     var label = 'Session \u2014 Game ' + gameCount;
     if (lineup.sittingOut) {
-      var sittingOutPlayer = TichuPlayers.getPlayer(lineup.sittingOut);
-      label += ' \u00b7 ' + (sittingOutPlayer ? sittingOutPlayer.name : '?') + ' sits out';
+      if (isThreeTeams) {
+        label += ' \u00b7 ' + TichuPlayers.teamNameString(lineup.sittingOut) + (currentGame.winner ? ' sat out' : ' sit out');
+      } else {
+        var sittingOutPlayer = TichuPlayers.getPlayer(lineup.sittingOut);
+        label += ' \u00b7 ' + (sittingOutPlayer ? sittingOutPlayer.name : '?') + ' sits out';
+      }
     }
+
     $('#session-tag-text').text(label);
     $('#session-tag').removeClass('hidden');
 
@@ -376,13 +482,42 @@
     // alternate, also across games). Only session games know who's who,
     // so quick games never show this tag.
     var dealerId = TichuPlayers.getCurrentRoundDealer(currentGame);
-    if (dealerId) {
+    if (dealerId && !(isThreeTeams && currentGame.winner)) {
       var dealer = TichuPlayers.getPlayer(dealerId);
       $('#dealer-tag-text').text('Dealer: ' + (dealer ? dealer.name : '?'));
       $('#dealer-tag').removeClass('hidden');
     } else {
       $('#dealer-tag').addClass('hidden');
     }
+  }
+
+  function threeTeamScores(game) {
+    return game.rounds.length ? game.rounds[game.rounds.length - 1].scores.slice() : [0, 0, 0];
+  }
+
+  function showThreeTeamWinner() {
+    if (!currentGame || currentGame.mode !== 'threeTeams') return;
+    if (!currentGame.winner) {
+      $('#win-banner').addClass('hidden');
+      return;
+    }
+    var index = ['A', 'B', 'C'].indexOf(currentGame.winner);
+    $('#win-banner-text').text(TichuPlayers.teamNameString(currentGame.teams[index]) + ' wins!');
+    $('#win-banner, #win-banner-finish').removeClass('hidden');
+  }
+
+  function checkThreeTeamWin() {
+    if (!currentGame || currentGame.mode !== 'threeTeams' || currentGame.winner || !currentGame.rounds.length) return;
+    var scores = threeTeamScores(currentGame);
+    var max = Math.max.apply(null, scores);
+    var leaders = [0, 1, 2].filter(function (i) { return scores[i] === max; });
+    if (max >= winThreshold && leaders.length === 1) {
+      currentGame = TichuPlayers.finishGame(currentGame.id, ['A', 'B', 'C'][leaders[0]], {
+        teamA: scores[0], teamB: scores[1], teamC: scores[2]
+      });
+      return true;
+    }
+    return false;
   }
 
   update = function() {
@@ -418,6 +553,7 @@
   };
 
   nextRound = function() {
+    if (sessionMode && currentGame && currentGame.mode === 'threeTeams' && currentGame.winner) return false;
     history.push({
       data: $.extend(true, {}, data),
       roundNumber: roundNumber,
@@ -470,7 +606,25 @@
 
     // Session mode: also attach this round to the session's game record
     // so it survives independently of TichuStorage's single-game slot.
-    if (sessionMode && currentGame) {
+    if (sessionMode && currentGame && currentGame.mode === 'threeTeams') {
+      var sixLineup = TichuPlayers.getRoundLineup(currentGame, roundNumber);
+      var scores = threeTeamScores(currentGame);
+      var mods = [null, null, null];
+      var doubles = [false, false, false];
+      sixLineup.activeIndices.forEach(function (index, slot) {
+        var side = ref[slot];
+        scores[index] = data[side].points;
+        mods[index] = data[side].tichuMod;
+        doubles[index] = data[side].doubleWin;
+      });
+      TichuPlayers.recordRound(currentGame.id, {
+        scores: scores, activeTeams: sixLineup.activeIndices,
+        tichuMods: mods, doubleWins: doubles,
+        dealerPlayerId: TichuPlayers.getCurrentRoundDealer(currentGame)
+      });
+      currentGame = TichuPlayers.getGame(currentGame.id);
+      checkThreeTeamWin();
+    } else if (sessionMode && currentGame) {
       var roundLineup = TichuPlayers.getRoundLineup(currentGame, roundNumber);
       TichuPlayers.recordRound(currentGame.id, {
         teamAPoints: teamAScore,
@@ -502,7 +656,7 @@
     const winners = ref.filter(function(t) {
       return prevPoints[t] < winThreshold && data[t].points >= winThreshold;
     });
-    if (winners.length) {
+    if (winners.length && !(currentGame && currentGame.mode === 'threeTeams')) {
       const names = winners.map(function(t) {
         return $('#team' + t + 'Name').val() || ('Team ' + t);
       });
