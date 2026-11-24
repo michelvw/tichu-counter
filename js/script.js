@@ -34,7 +34,7 @@
     });
 
     // Tichu dropdown
-    $('.tichu-modifier .dropdown-content a').click(function() {
+    $('.tichu-modifier .dropdown-content button').click(function() {
       var parentId = $(this).parents('.card').attr('id');
       data[parentId].tichuModText = $(this).text();
       data[parentId].tichuMod = parseInt($(this).attr('data-value'));
