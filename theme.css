@@ -894,6 +894,10 @@ nav ul a[data-label]::after {
   margin-top: 0;
 }
 #add-player-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  line-height: 1.2;
   margin-bottom: 8px;
 }
 
