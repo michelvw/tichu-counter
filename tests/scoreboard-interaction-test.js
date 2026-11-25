@@ -51,26 +51,22 @@ const puppeteer = require('puppeteer');
     const afterResetUndo = await boardState();
     console.log('After undo of reset:', JSON.stringify(afterResetUndo));
 
-    // Custom win threshold via the Apply button.
-    await page.click('#win-threshold-button');
-    await page.evaluate(() => {
-      document.querySelector('#customWinThreshold').value = '750';
-    });
-    await page.click('#customWinThresholdApply');
+    // Preset win threshold via Settings.
+    await Promise.all([page.waitForNavigation(), page.click('#settings-link')]);
+    await page.select('#win-threshold', '750');
+    await page.click('#win-threshold-form button');
     const thresholdApplied = await page.evaluate(() => ({
       winThreshold: TichuStorage.getWinThreshold(),
-      buttonText: document.querySelector('#win-threshold-button').textContent,
     }));
     console.log('Threshold applied:', JSON.stringify(thresholdApplied));
 
     // Custom win threshold via Enter key in the input.
-    await page.click('#win-threshold-button');
-    await page.focus('#customWinThreshold');
+    await page.select('#win-threshold', 'custom');
+    await page.focus('#custom-win-threshold');
     await page.keyboard.type('1000');
     await page.keyboard.press('Enter');
     const thresholdEntered = await page.evaluate(() => ({
       winThreshold: TichuStorage.getWinThreshold(),
-      buttonText: document.querySelector('#win-threshold-button').textContent,
     }));
     console.log('Threshold via Enter:', JSON.stringify(thresholdEntered));
 

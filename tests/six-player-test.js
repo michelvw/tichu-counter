@@ -32,6 +32,15 @@ const server = http.createServer((req, res) => {
     const errors = [];
     page.on('pageerror', (err) => errors.push(err.message));
 
+    async function setTarget(value) {
+      await Promise.all([page.waitForNavigation(), page.click('#settings-link')]);
+      const preset = ['300', '500', '750', '1000'].includes(String(value));
+      await page.select('#win-threshold', preset ? String(value) : 'custom');
+      if (!preset) await page.$eval('#custom-win-threshold', (input, target) => { input.value = target; }, String(value));
+      await page.click('#win-threshold-form button');
+      await Promise.all([page.waitForNavigation(), page.click('a[aria-label="Back to scoreboard"]')]);
+    }
+
     async function checkGraphDefault() {
       const view = await page.evaluate(() => ({
         graphHidden: document.querySelector('#graph-container').classList.contains('hidden'),
@@ -162,14 +171,11 @@ const server = http.createServer((req, res) => {
     assert.deepStrictEqual(await page.$$eval('.remaining-label', (labels) =>
       labels.map((label) => label.textContent)), ['400 left', '400 left', '400 left']);
     assert((await progressBars()).every((bar) => bar.width === 20 && bar.value === 100));
-    await page.click('#win-threshold-button');
-    await page.click('.win-threshold-option[data-value="750"]');
+    await setTarget(750);
     assert.deepStrictEqual(await page.$$eval('.remaining-label', (labels) =>
       labels.map((label) => label.textContent)), ['650 left', '650 left', '650 left']);
     assert((await progressBars()).every((bar) => Math.abs(bar.width - 100 / 750 * 100) < 0.0001 && bar.max === 750));
-    await page.click('#win-threshold-button');
-    await page.$eval('#customWinThreshold', (input) => { input.value = '600'; });
-    await page.click('#customWinThresholdApply');
+    await setTarget(600);
     assert.deepStrictEqual(await page.$$eval('.remaining-label', (labels) =>
       labels.map((label) => label.textContent)), ['500 left', '500 left', '500 left']);
     assert.deepStrictEqual(after.game.rounds.map((r) => r.activeTeams.length), [2, 2, 2]);
@@ -197,9 +203,7 @@ const server = http.createServer((req, res) => {
     assert((await progressBars()).every((bar, i) => bar.value === after.scores[i]));
     await page.click('#reset');
 
-    await page.click('#win-threshold-button');
-    await page.$eval('#customWinThreshold', (input) => { input.value = '50'; });
-    await page.click('#customWinThresholdApply');
+    await setTarget(50);
     await page.click('#btn-next');
     assert.strictEqual((await state()).game.winner, null, 'tied leaders must continue');
     assert.deepStrictEqual((await page.$$eval('.remaining-label', (labels) =>

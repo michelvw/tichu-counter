@@ -966,6 +966,17 @@
     return game;
   }
 
+  function finishThreeTeamGameIfWon(game, threshold) {
+    if (!game || game.mode !== "threeTeams" || game.winner || !game.rounds.length) return game;
+    var scores = game.rounds[game.rounds.length - 1].scores;
+    var max = Math.max.apply(null, scores);
+    var leaders = [0, 1, 2].filter(function (i) { return scores[i] === max; });
+    if (max < threshold || leaders.length !== 1) return game;
+    return finishGame(game.id, ["A", "B", "C"][leaders[0]], {
+      teamA: scores[0], teamB: scores[1], teamC: scores[2]
+    });
+  }
+
   // Discards an in-progress game entirely (e.g. started by mistake, or
   // the user wants to end the session without finishing it) so it never
   // lands in session history as an orphaned, winner-less game.
@@ -1056,6 +1067,7 @@
     restoreGameRounds: restoreGameRounds,
     reopenGame: reopenGame,
     finishGame: finishGame,
+    finishThreeTeamGameIfWon: finishThreeTeamGameIfWon,
     discardCurrentGame: discardCurrentGame,
     deleteGame: deleteGame,
     deleteSession: deleteSession,

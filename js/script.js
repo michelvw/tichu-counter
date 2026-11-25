@@ -12,6 +12,38 @@
 
   $(function() {
     init();
+    restoreSettingsSnapshot();
+
+    $('#settings-link').click(function() {
+      try {
+        sessionStorage.setItem('tichuSettingsReturn', JSON.stringify({
+          gameId: currentGame ? currentGame.id : null,
+          winner: currentGame ? currentGame.winner : null,
+          roundNumber: TichuStorage.getRoundNumber(),
+          roundScores: TichuStorage.getRoundScores(),
+          pointsA: TichuStorage.getPoints('A'),
+          pointsB: TichuStorage.getPoints('B'),
+          data: data,
+          history: history
+        }));
+      } catch (error) {
+        console.warn('Could not preserve the current round while opening settings:', error);
+        return window.confirm('The current round and undo history may be lost. Open settings anyway?');
+      }
+    });
+
+    window.addEventListener('storage', function(event) {
+      if (event.key !== TichuStorage.KEYS.WIN_THRESHOLD) return;
+      winThreshold = TichuStorage.getWinThreshold();
+      if (sessionMode && currentGame && currentGame.mode === 'threeTeams') {
+        currentGame = TichuPlayers.getCurrentGame() || currentGame;
+        checkThreeTeamWin();
+        updateSessionRoundDisplay();
+      } else {
+        showThresholdWinner();
+      }
+      update();
+    });
 
     // The +/- stepper links are icon-only; give them accessible names so
     // screen-reader users get the same affordance as a tapping player.
@@ -25,6 +57,28 @@
       data[parentId === 'A' ? 'B' : 'A'].currentPoints = data[parentId === 'A' ? 'B' : 'A'].currentPoints >= 125 ? 125 : data[parentId === 'A' ? 'B' : 'A'].currentPoints + 5;
       return update();
     });
+
+    function restoreSettingsSnapshot() {
+      var snapshot;
+      try {
+        snapshot = JSON.parse(sessionStorage.getItem('tichuSettingsReturn'));
+        sessionStorage.removeItem('tichuSettingsReturn');
+      } catch (error) {
+        console.warn('Could not restore the round after settings:', error);
+        return;
+      }
+      if (!snapshot || snapshot.gameId !== (currentGame ? currentGame.id : null) ||
+          snapshot.roundNumber !== TichuStorage.getRoundNumber() ||
+          snapshot.pointsA !== TichuStorage.getPoints('A') ||
+          snapshot.pointsB !== TichuStorage.getPoints('B') ||
+          JSON.stringify(snapshot.roundScores) !== JSON.stringify(TichuStorage.getRoundScores())) return;
+      history = snapshot.history;
+      if (snapshot.winner === (currentGame ? currentGame.winner : null)) {
+        data = snapshot.data;
+        if (sessionMode) updateSessionRoundDisplay();
+        update();
+      }
+    }
 
     $('.adding-points .plus').click(function() {
       var parentId = $(this).parents('.card').attr('id');
@@ -187,69 +241,6 @@
       }
     });
 
-    // Win threshold panel: open/close on button click, close on outside click
-    $('#win-threshold-button').click(function(e) {
-      e.preventDefault();
-      $('#winThresholdPanel').toggleClass('hidden');
-    });
-    $(document).click(function(e) {
-      if (!$(e.target).closest('#winThresholdPanel, #win-threshold-button').length) {
-        $('#winThresholdPanel').addClass('hidden');
-      }
-    });
-
-    // Win threshold: preset options in the panel
-    $('.win-threshold-option').click(function(e) {
-      e.preventDefault();
-      if (currentGame && currentGame.mode === 'threeTeams' && currentGame.winner) return;
-      var value = parseInt($(this).attr('data-value'));
-      winThreshold = value;
-      TichuStorage.setWinThreshold(winThreshold);
-      $('#win-threshold-button').text('Win: ' + winThreshold);
-      $('#customWinThreshold').val('');
-      $('#winThresholdPanel').addClass('hidden');
-      checkThreeTeamWin();
-      if (sessionMode && currentGame && currentGame.mode === 'threeTeams') updateSessionRoundDisplay();
-      update();
-    });
-
-    // Win threshold: custom value field at the bottom of the panel.
-    // Applied explicitly via the Apply button (or Enter), so a typed
-    // value is never silently committed by an accidental blur, nor
-    // silently dropped when the panel closes.
-    function applyCustomWinThreshold() {
-      if (currentGame && currentGame.mode === 'threeTeams' && currentGame.winner) return;
-      var value = parseInt($('#customWinThreshold').val(), 10);
-      if (!isNaN(value) && value > 0) {
-        winThreshold = value;
-        TichuStorage.setWinThreshold(winThreshold);
-        $('#win-threshold-button').text('Win: ' + winThreshold);
-        $('#customWinThreshold').val('');
-        checkThreeTeamWin();
-        if (sessionMode && currentGame && currentGame.mode === 'threeTeams') updateSessionRoundDisplay();
-        update();
-        if (typeof M !== 'undefined' && M.toast) {
-          M.toast({ html: 'Win threshold set to ' + winThreshold, displayLength: 2000 });
-        }
-      }
-      $('#winThresholdPanel').addClass('hidden');
-    }
-    $('#customWinThresholdApply').click(function(e) {
-      e.preventDefault();
-      applyCustomWinThreshold();
-    });
-    $('#customWinThreshold').on('keydown', function(e) {
-      if (e.key === 'Enter') {
-        e.preventDefault();
-        applyCustomWinThreshold();
-      }
-    });
-    // Prevent a click inside the panel (e.g. on the input) from
-    // bubbling up to the document handler above and closing it early.
-    $('#winThresholdPanel').click(function(e) {
-      e.stopPropagation();
-    });
-
     // Dismiss the win banner
     $('#win-banner-close').click(function(e) {
       e.preventDefault();
@@ -335,7 +326,6 @@
   $('#round-counter').text('Round ' + roundNumber);
 
   winThreshold = TichuStorage.getWinThreshold();
-  $('#win-threshold-button').text('Win: ' + winThreshold);
 
   // Session mode: if there's a game in progress for a session, this
   // scoreboard is playing it out. Team names already came from
@@ -365,17 +355,8 @@
     // stranding the session on a game that's colloquially finished but
     // never actually got closed out. Recompute it from the restored
     // points instead of relying on that one-off event.
-    var over = ref.filter(function(t) { return data[t].points >= winThreshold; });
     if (currentGame.mode === 'threeTeams') {
       showThreeTeamWinner();
-    } else if (over.length) {
-      var overNames = over.map(function(t) {
-        return $('#team' + t + 'Name').val() || ('Team ' + t);
-      });
-      var overVerb = overNames.length > 1 ? 'have' : 'has';
-      $('#win-banner-text').text(overNames.join(' & ') + ' ' + overVerb + ' reached ' + winThreshold + ' points! \uD83C\uDF89');
-      $('#win-banner').removeClass('hidden');
-      $('#win-banner-finish').removeClass('hidden');
     }
   } else {
     $('#session-tag').addClass('hidden');
@@ -393,6 +374,9 @@
     $('#win-banner-close').removeClass('hidden');
   }
 
+  if (!currentGame || currentGame.mode !== 'threeTeams') {
+    showThresholdWinner();
+  }
   return update();
 };
 
@@ -422,6 +406,7 @@
           .addClass('team-index-' + lineup.activeIndices[slot]);
       });
       var $scores = $('#three-team-scores').empty();
+      $scores.append($('<div class="three-team-target"></div>').text('Goal: ' + winThreshold));
       currentGame.teams.forEach(function (team, index) {
         var $score = $('<div class="three-team-score"></div>').addClass('team-index-' + index);
         var teamName = TichuPlayers.teamNameString(team);
@@ -508,16 +493,21 @@
 
   function checkThreeTeamWin() {
     if (!currentGame || currentGame.mode !== 'threeTeams' || currentGame.winner || !currentGame.rounds.length) return;
-    var scores = threeTeamScores(currentGame);
-    var max = Math.max.apply(null, scores);
-    var leaders = [0, 1, 2].filter(function (i) { return scores[i] === max; });
-    if (max >= winThreshold && leaders.length === 1) {
-      currentGame = TichuPlayers.finishGame(currentGame.id, ['A', 'B', 'C'][leaders[0]], {
-        teamA: scores[0], teamB: scores[1], teamC: scores[2]
-      });
-      return true;
+    currentGame = TichuPlayers.finishThreeTeamGameIfWon(currentGame, winThreshold);
+    return !!currentGame.winner;
+  }
+
+  function showThresholdWinner() {
+    var over = ['A', 'B'].filter(function(t) { return data[t].points >= winThreshold; });
+    if (!over.length) {
+      $('#win-banner, #win-banner-finish').addClass('hidden');
+      return;
     }
-    return false;
+    var names = over.map(function(t) { return $('#team' + t + 'Name').val() || ('Team ' + t); });
+    var verb = names.length > 1 ? 'have' : 'has';
+    $('#win-banner-text').text(names.join(' & ') + ' ' + verb + ' reached ' + winThreshold + ' points! \uD83C\uDF89');
+    $('#win-banner').removeClass('hidden');
+    $('#win-banner-finish').toggleClass('hidden', !sessionMode);
   }
 
   update = function() {

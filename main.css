@@ -6612,12 +6612,6 @@ th,
 td {
 padding: 10px;
 }
-/* Win threshold dropdown button, right side of the nav (index.html only
-   -- it's a real, tappable control there, opening the picker panel). */
-#win-threshold-button {
-font-weight: bold;
-}
-
 /* Info bar: a slim strip directly under the nav for purely informational
    text (round number, and on the scores page, win threshold too). Its
    own dedicated row means it never has to compete for space with the
@@ -6646,40 +6640,6 @@ margin: 0 8px;
 color: #ccc;
 font-weight: normal;
 }
-/* Win threshold: custom panel, positioned under the nav button */
-#winThresholdPanel {
-position: absolute;
-top: 56px;
-right: 8px;
-background-color: #fff;
-box-shadow: 0 2px 6px rgba(0, 0, 0, 0.3);
-border-radius: 4px;
-z-index: 100;
-display: flex;
-flex-direction: column;
-min-width: 140px;
-overflow: hidden;
-}
-#winThresholdPanel.hidden {
-display: none;
-}
-#winThresholdPanel .win-threshold-option {
-padding: 12px 16px;
-color: #333;
-font-weight: bold;
-}
-#winThresholdPanel .win-threshold-option:active {
-background-color: #f2f2f2;
-}
-.custom-threshold {
-padding: 8px 16px 12px;
-border-top: 1px solid #eee;
-}
-.custom-threshold input {
-width: 100%;
-margin: 0;
-}
-
 /* Win banner */
 #win-banner {
 background-color: #4caf50;

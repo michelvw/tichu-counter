@@ -369,6 +369,33 @@ if (threeTeamGame) {
   scoreChart.update();
 }
 
+function updateChartTheme() {
+  const styles = getComputedStyle(document.documentElement);
+  const color = (name) => styles.getPropertyValue(name).trim();
+  const surface = color("--surface");
+  const muted = color("--text-muted");
+  const border = color("--border");
+  ["a", "b", "c"].forEach((team, index) => {
+    const dataset = scoreChart.data.datasets[index];
+    if (!dataset) return;
+    dataset.borderColor = color(`--team-${team}`);
+    if (team !== "c") dataset.backgroundColor = color(`--team-${team}-soft`);
+    dataset.datalabels.color = color(`--team-${team}`);
+    dataset.datalabels.backgroundColor = surface;
+  });
+  scoreChart.options.plugins.customCanvasBackgroundColor.color = surface;
+  scoreChart.options.plugins.legend.labels = { color: muted };
+  ["x", "y"].forEach((axis) => {
+    scoreChart.options.scales[axis].ticks = { color: muted };
+    scoreChart.options.scales[axis].title.color = muted;
+    scoreChart.options.scales[axis].grid = { color: border };
+  });
+  scoreChart.update();
+}
+
+document.addEventListener("tichu-theme-change", updateChartTheme);
+updateChartTheme();
+
 // Toggle between table and graph
 const toggleButton = document.getElementById("toggle-view");
 const tableContainer = document.getElementById("table-container");

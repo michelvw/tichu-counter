@@ -15,7 +15,7 @@
    ========================================================================= */
 
 :root {
-  color-scheme: light dark;
+  color-scheme: light;
 
   /* Warm ivory surfaces and deep table-felt green keep the game identity
      present without competing with live score entry. */
@@ -31,6 +31,7 @@
 
   --brand: #18583f;
   --brand-strong: #104832;
+  --nav-bg: #104832;
   --brand-soft: rgba(24, 88, 63, 0.12);
   --on-brand: #ffffff;
 
@@ -53,36 +54,34 @@
   --font-sans: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --bg: #101a15;
-    --surface: #19251e;
-    --surface-2: #223128;
-    --surface-3: #2d3d32;
-    --border: #35473a;
-    --border-strong: #4a5c4e;
-    --text: #f0f1e8;
-    --text-muted: #b5c0b5;
-    --text-faint: #8b9a8e;
+:root[data-theme="dark"] {
+  color-scheme: dark;
+  --bg: #111b16;
+  --surface: #1b2921;
+  --surface-2: #26372b;
+  --surface-3: #344639;
+  --border: #405344;
+  --border-strong: #647666;
+  --text: #f4f0e5;
+  --text-muted: #c5cbbd;
+  --text-faint: #a4b0a1;
 
-    --brand: #4cb58a;
-    --brand-strong: #63c99d;
-    --brand-soft: rgba(76, 181, 138, 0.17);
-    --on-brand: #08150f;
+  --brand: #73c59c;
+  --brand-strong: #90d6b1;
+  --nav-bg: #103c2d;
+  --brand-soft: rgba(115, 197, 156, 0.16);
+  --on-brand: #10251a;
 
-    --team-a: #e5ad55;
-    --team-a-fill: #e5ad55;
-    --team-a-soft: rgba(229, 173, 85, 0.16);
-    --team-b: #73b2c4;
-    --team-b-fill: #73b2c4;
-    --team-b-soft: rgba(115, 178, 196, 0.16);
-    --team-c: #c19bd9;
-
-    --danger: #ef8174;
-
-    --shadow-1: 0 1px 2px rgba(0, 0, 0, 0.3), 0 2px 6px rgba(0, 0, 0, 0.28);
-    --shadow-2: 0 8px 24px rgba(0, 0, 0, 0.4);
-  }
+  --team-a: #efbd6b;
+  --team-a-fill: #efbd6b;
+  --team-a-soft: rgba(239, 189, 107, 0.16);
+  --team-b: #8bc4d1;
+  --team-b-fill: #8bc4d1;
+  --team-b-soft: rgba(139, 196, 209, 0.16);
+  --team-c: #d3b2e2;
+  --danger: #f39b8f;
+  --shadow-1: 0 1px 2px rgba(0, 0, 0, 0.3), 0 2px 6px rgba(0, 0, 0, 0.28);
+  --shadow-2: 0 8px 24px rgba(0, 0, 0, 0.4);
 }
 
 /* ---------------------------------------------------------------- base --- */
@@ -146,21 +145,6 @@ nav ul a:hover {
 nav ul a:active {
   color: var(--brand);
 }
-/* Win-threshold button reads as an actionable pill, not a label */
-#win-threshold-button {
-  display: inline-flex;
-  align-items: center;
-  height: 38px;
-  margin: 11px 6px;
-  padding: 0 14px;
-  line-height: 38px;
-  color: var(--brand);
-  background-color: var(--brand-soft);
-  border-radius: var(--radius-pill);
-  font-weight: 700;
-  letter-spacing: 0.01em;
-}
-
 /* ------------------------------------------------------------ info bar --- */
 
 .info-bar {
@@ -325,6 +309,9 @@ nav ul a:active {
   border-right-color: var(--on-brand);
   border-bottom-color: var(--on-brand);
 }
+[type="checkbox"].filled-in:not(:checked) + label:after {
+  border-color: var(--text-faint);
+}
 .double-win label,
 [type="checkbox"] + label {
   color: var(--text-muted);
@@ -427,22 +414,6 @@ select.browser-default,
   color: var(--on-brand);
 }
 
-#winThresholdPanel {
-  background-color: var(--surface);
-  border: 1px solid var(--border);
-  border-radius: var(--radius-sm);
-  box-shadow: var(--shadow-2);
-}
-#winThresholdPanel .win-threshold-option {
-  color: var(--text);
-}
-#winThresholdPanel .win-threshold-option:active {
-  background-color: var(--surface-2);
-}
-.custom-threshold {
-  border-top: 1px solid var(--border);
-}
-
 /* --------------------------------------------------------- game progress --- */
 
 #game-progress {
@@ -518,6 +489,13 @@ table thead th {
 }
 #three-team-scores.hidden { display: none; }
 #win-banner-close.hidden { display: none; }
+.three-team-target {
+  grid-column: 1 / -1;
+  color: var(--text-muted);
+  font-size: 0.75rem;
+  font-weight: 700;
+  text-align: center;
+}
 .three-team-score {
   background: var(--surface);
   border: 1px solid var(--border);
@@ -568,6 +546,11 @@ body.three-team-mode .card#B .card-content .points { color: var(--team-color); }
   border: 1px solid var(--border);
   border-radius: var(--radius);
 }
+@media (orientation: landscape) {
+  #graph-container.landscape-graph {
+    background-color: var(--bg);
+  }
+}
 
 /* --------------------------------------------------- collections / lists --- */
 
@@ -616,6 +599,15 @@ body.three-team-mode .card#B .card-content .points { color: var(--team-color); }
 /* selected player pick row — use team-A amber tint to match the app accent */
 .player-pick-row.selected {
   background-color: var(--team-a-soft);
+}
+#pick-status {
+  color: var(--text-muted);
+}
+.session-actions-secondary {
+  border-top-color: var(--border);
+}
+.game-row .icon-action {
+  color: var(--text-faint);
 }
 
 /* --------------------------------------------------------------- chips --- */
@@ -729,21 +721,21 @@ nav ul li {
   display: flex;
   height: 64px;
 }
-/* Icon + small caption stacked. The :not(#id) keeps the win-threshold pill
-   out of this rule and also lifts specificity above Materialize + the
-   earlier nav rules in this file, so it wins at every width. */
-nav ul a:not(#win-threshold-button) {
+/* Icon + small caption stacked above Materialize's navigation styles. */
+nav ul a[data-label] {
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
   gap: 3px;
+  min-width: 44px;
+  box-sizing: border-box;
   height: 64px;
   padding: 0 11px;
   line-height: 1;
   border-radius: var(--radius-sm);
 }
-nav ul a:not(#win-threshold-button) .material-icons {
+nav ul a[data-label] .material-icons {
   height: auto;
   margin: 0;
   line-height: 1;
@@ -775,11 +767,8 @@ nav ul a[data-label]::after {
     visibility: visible;
   }
 }
-#win-threshold-button {
-  margin: 13px 6px;
-}
 @media only screen and (max-width: 380px) {
-  nav ul a:not(#win-threshold-button) {
+  nav ul a[data-label] {
     padding: 0 8px;
   }
   nav ul a[data-label]::after {
@@ -797,7 +786,7 @@ body {
 
 nav,
 nav .nav-wrapper {
-  background-color: var(--brand-strong);
+  background-color: var(--nav-bg);
   border-bottom-color: rgba(255, 255, 255, 0.13);
 }
 nav a,
@@ -805,32 +794,50 @@ nav .material-icons,
 nav ul a[data-label]::after {
   color: #f6f3e9;
 }
-nav ul a:not(#win-threshold-button):hover,
-nav ul a:not(#win-threshold-button):focus-visible {
+nav ul a[data-label]:hover,
+nav ul a[data-label]:focus-visible {
   background-color: rgba(255, 255, 255, 0.12);
 }
-nav ul a:not(#win-threshold-button):active {
+nav ul a[data-label]:active {
   color: #f0c779;
 }
 nav ul a[data-label]::after {
   opacity: 1;
   visibility: visible;
 }
-#win-threshold-button {
-  color: #f5d48d;
-  background-color: rgba(255, 255, 255, 0.12);
-}
-#win-threshold-button:hover,
-#win-threshold-button:focus-visible {
-  background-color: rgba(255, 255, 255, 0.2);
-}
-
 .info-bar {
   background-color: var(--surface);
   border-bottom-color: var(--border);
   color: var(--text-muted);
+  flex-wrap: wrap;
   font-weight: 700;
   letter-spacing: 0.08em;
+}
+.settings-page {
+  max-width: 620px;
+  padding-bottom: 32px;
+}
+.settings-section {
+  padding: 18px;
+}
+.settings-section h5 {
+  margin: 0 0 16px;
+  font-size: 1.15rem;
+}
+.settings-section label {
+  display: block;
+  margin-bottom: 6px;
+}
+.settings-section select.browser-default {
+  width: 100%;
+  min-height: 44px;
+  padding: 0 12px;
+}
+#custom-threshold-field {
+  margin-top: 16px;
+}
+#threshold-status:empty {
+  display: none;
 }
 
 .page-heading {
@@ -870,6 +877,10 @@ nav ul a[data-label]::after {
 .team-preview-card,
 .three-team-score {
   transition: background-color 160ms ease, border-color 160ms ease, box-shadow 160ms ease;
+}
+.card#A,
+.card#B {
+  transition-property: background-color, box-shadow;
 }
 .ranking-row-link,
 .player-row-link {
@@ -1029,19 +1040,4 @@ nav ul a[data-label]::after {
 }
 .table-scroll table {
   min-width: 560px;
-}
-
-/* ---- win threshold panel: explicit Apply action -------------------------- */
-
-.custom-threshold {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-}
-#customWinThreshold {
-  flex: 1;
-  min-width: 0;
-}
-#customWinThresholdApply {
-  white-space: nowrap;
 }

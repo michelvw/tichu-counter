@@ -10,6 +10,10 @@ after installation, and stores data locally on your device.
 
 ### Score a game
 
+- Open Settings from the scoreboard to choose Light, Dark, or System and
+  set the points needed to win. Preferences are remembered on this device.
+- Changing the target during a game requires confirmation and can end a
+  six-player game immediately if there is a sole leader at the new target.
 - Record points round by round for two teams.
 - Apply Tichu and Grand Tichu modifiers, including failed bids.
 - Record double wins.
@@ -109,10 +113,12 @@ node headless-test.js            # service worker caching + rotation fairness
 node scoreboard-interaction-test.js  # undo / reset / win-threshold behavior
 node dealer-rotation-test.js         # dealer fairness / alternation / sit-out skip
 node six-player-test.js              # three-team rotation, scoring and history
+node theme-test.js                   # theme preference, chart and offline caching
+node settings-test.js                # target settings and in-progress games
 ```
 
 The first three tests expect the app at <http://localhost:8000>. The
-six-player test starts its own server on an available local port.
+six-player, theme, and settings tests start their own servers on available local ports.
 
 ## Technology
 
@@ -128,6 +134,7 @@ six-player test starts its own server on an available local port.
 | Path | Purpose |
 | --- | --- |
 | `index.html` | Main scoring screen |
+| `settings.html` | Appearance and game settings |
 | `round-scores.html` | Round history and charts |
 | `sessions.html` | Session setup and active sessions |
 | `session-history.html` | Completed session history |

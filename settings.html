@@ -1,0 +1,62 @@
+<!doctype html>
+<html class="no-js" lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Settings - Tichu Counter</title>
+    <meta name="theme-color" content="#104832">
+    <link rel="icon" type="image/svg+xml" href="dragon-icon.svg">
+    <link rel="stylesheet" href="main.css">
+    <script src="js/theme.js"></script>
+    <link rel="stylesheet" href="theme.css">
+  </head>
+  <body>
+    <nav>
+      <div class="nav-wrapper">
+        <ul id="nav-mobile" class="left">
+          <li><a href="index.html" data-label="Back" aria-label="Back to scoreboard" title="Back to scoreboard"><i class="material-icons" aria-hidden="true">arrow_back</i></a></li>
+        </ul>
+      </div>
+    </nav>
+    <div class="info-bar"><span>Settings</span></div>
+    <main class="container settings-page">
+      <div class="page-heading">
+        <h4>Settings</h4>
+        <p class="helper-text">Preferences are saved on this device.</p>
+      </div>
+      <section class="card-panel settings-section" aria-labelledby="appearance-heading">
+        <h5 id="appearance-heading">Appearance</h5>
+        <label for="theme-picker">Theme</label>
+        <select id="theme-picker" class="browser-default">
+          <option value="system">System</option>
+          <option value="light">Light</option>
+          <option value="dark">Dark</option>
+        </select>
+        <p class="helper-text">System follows your device's appearance.</p>
+      </section>
+      <section class="card-panel settings-section" aria-labelledby="game-heading">
+        <h5 id="game-heading">Game</h5>
+        <form id="win-threshold-form" novalidate>
+          <label for="win-threshold">Points to win</label>
+          <select id="win-threshold" class="browser-default">
+            <option value="300">300</option>
+            <option value="500">500</option>
+            <option value="750">750</option>
+            <option value="1000">1,000</option>
+            <option value="custom">Custom</option>
+          </select>
+          <div id="custom-threshold-field" hidden>
+            <label for="custom-win-threshold">Custom points to win</label>
+            <input id="custom-win-threshold" type="number" inputmode="numeric" min="1" step="1">
+          </div>
+          <p class="helper-text">The target applies to the current game and future games.</p>
+          <button type="submit" class="btn">Save target</button>
+          <p id="threshold-status" role="status" aria-live="polite"></p>
+        </form>
+      </section>
+    </main>
+    <script src="js/storage.js"></script>
+    <script src="js/players-storage.js"></script>
+    <script src="js/settings.js"></script>
+  </body>
+</html>
