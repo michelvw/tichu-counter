@@ -65,6 +65,12 @@
         </section>
 
         <div class="player-stats-actions">
+          <div id="readonly-banner" class="card-panel hidden">Live view &mdash; hosted by another player (read-only)</div>
+          <section id="link-section" class="hidden">
+            <h5>Account link</h5>
+            <p class="grey-text" id="link-status"></p>
+            <div id="link-buttons"></div>
+          </section>
           <button type="button" id="archive-player" class="btn-flat red-text">Archive this player</button>
           <button type="button" id="reset-player-stats" class="btn-flat red-text">Reset this player's statistics</button>
         </div>
@@ -73,6 +79,7 @@
 
     <script src="js/storage.js"></script>
     <script src="js/players-storage.js"></script>
+    <script src="js/linking.js"></script>
     <script src="js/player-stats.js"></script>
   </body>
 </html>

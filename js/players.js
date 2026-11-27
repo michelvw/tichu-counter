@@ -90,6 +90,8 @@
         .attr("href", "player-stats.html?id=" + encodeURIComponent(entry.player.id));
       $link.append($('<span class="ranking-position"></span>').text(index + 1));
       $link.append($('<span class="ranking-player-name"></span>').text(entry.player.name));
+      var tag = window.TichuLinking && TichuLinking.badge(entry.player);
+      if (tag) $link.append($('<span class="player-badge"></span>').addClass("badge-" + tag.toLowerCase()).text(tag));
       $link.append($('<strong class="ranking-value"></strong>').text(value));
       $li.append($link);
       $ranking.append($li);
@@ -155,6 +157,11 @@
   $("#toggle-archived").on("click", function (e) {
     e.preventDefault();
     $("#archived-players-list").toggleClass("hidden");
+  });
+
+  $("#claim-invite-btn").on("click", function (e) {
+    e.preventDefault();
+    TichuLinking.claim();
   });
 
   $("#ranking-sort").on("change", function () {

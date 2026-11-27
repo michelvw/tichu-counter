@@ -256,7 +256,7 @@
   }
 
   function renderStartSessionForm() {
-    var active = TichuPlayers.getPlayers({ activeOnly: true });
+    var active = TichuPlayers.getPlayers({ activeOnly: true, ownOnly: true });
     var $panel = $("#session-panel").empty();
     $panel.append('<div class="page-heading"><h4>New session</h4><p class="helper-text">Choose 4, 5 or 6 players to get started.</p></div>');
     if (active.length < 4) {
@@ -402,6 +402,7 @@
         $('<strong></strong>').text("Session · " + fmtDate(s.startedAt)),
         $('<span class="helper-text"></span>').text(games.length + " game" + (games.length === 1 ? "" : "s") + " · " + fmtDuration(stats.durationMs))
       );
+      var mine = TichuPlayers.isOwn(s);
       var $deleteSession = $('<button type="button" class="session-delete-action btn-flat red-text"><i class="material-icons">delete</i>Delete session</button>');
       $deleteSession.on("click", function (e) {
         e.stopPropagation();
@@ -410,11 +411,43 @@
       var $detail = $('<div class="history-detail hidden"></div>');
       $detail.append($('<p class="helper-text"></p>').text(s.playerIds.map(playerName).join(" · ")));
       renderPlayerSessionStats($detail, s);
-      if (games.length) $detail.append(renderGamesList(games, deleteGame));
+      if (games.length) $detail.append(renderGamesList(games, mine ? deleteGame : null));
       $summary.on("click", function () { $detail.toggleClass("hidden"); });
-      $li.append($summary, $deleteSession, $detail);
+      $li.append($summary);
+      if (mine) $li.append($deleteSession);
+      else $summary.append($('<span class="helper-text"></span>').text("Hosted by another player (read-only)"));
+      $li.append($detail);
       $list.append($li);
     });
+  }
+
+  function renderLiveViews() {
+    $("#live-sessions").remove();
+    if (!$("#session-panel").length) return;
+    var live = TichuPlayers.getSessions().filter(function (s) {
+      return !TichuPlayers.isOwn(s) && (s.status === "active" || s.status === "paused");
+    });
+    if (!live.length) return;
+    var $box = $('<section id="live-sessions"></section>');
+    live.forEach(function (s) {
+      var games = TichuPlayers.getSessionGames(s.id);
+      $box.append('<div class="card-panel" id="readonly-banner">Live view \u2014 hosted by another player (read-only)</div>');
+      $box.append($('<p class="helper-text"></p>').text(s.playerIds.map(playerName).join(" \u00b7 ")));
+      if (games.length) $box.append(renderGamesList(games, null));
+    });
+    $("#session-panel").after($box);
+  }
+
+  function startLivePolling() {
+    var cloud = window.TichuCloud;
+    if (!$("#session-panel").length || !localStorage.getItem("tichuCloudUser") || !cloud || !cloud.sync.refresh) return;
+    setInterval(function () {
+      if (document.hidden) return;
+      var before = localStorage.getItem("tichuSessions") + localStorage.getItem("tichuGames");
+      cloud.getCurrentUser() && cloud.sync.refresh(cloud.getCurrentUser()).then(function () {
+        if (before !== localStorage.getItem("tichuSessions") + localStorage.getItem("tichuGames")) renderAll();
+      }).catch(function () {});
+    }, 20000);
   }
 
   function renderDetails() {
@@ -444,7 +477,9 @@
     }
     if ($("#session-history-list").length) renderHistory();
     if ($("#session-details-panel").length) renderDetails();
+    renderLiveViews();
   }
 
   renderAll();
+  startLivePolling();
 })();

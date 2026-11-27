@@ -1,5 +1,5 @@
 import { isConfigured } from "./firebase.js";
-import { clearLocal, flush, onSignIn, startAutoSync } from "./sync.js";
+import { claimInvite, clearLocal, createInvite, flush, linkSelf, onSignIn, refreshFromCloud, startAutoSync, unlinkPlayer } from "./sync.js";
 import {
   completeRedirectSignIn,
   getCurrentUser,
@@ -10,13 +10,14 @@ import {
   signOut,
 } from "./auth.js";
 
-const sync = { onSignIn, flush, clearLocal };
+const sync = { onSignIn, flush, clearLocal, refresh: refreshFromCloud };
+const linking = { linkSelf, createInvite, claimInvite, unlinkPlayer };
 
 // Entry point for the classic-script bundle (js/cloud.js).
 window.TichuCloud = {
   isConfigured,
   sync,
-  completeRedirectSignIn,
+  linking,
   getCurrentUser,
   isGuestMode,
   onAuthChange,

@@ -31,12 +31,47 @@
     setText("grand-tichu-record", stats.grandTichuWon + "W \u00b7 " + stats.grandTichuLost + "L");
     setText("double-wins", stats.doubleWins);
     setText("sessions-attended", stats.sessionsAttended);
+    renderLinking();
     $("#stats-content").removeClass("hidden");
+  }
+
+  function renderLinking() {
+    var L = window.TichuLinking;
+    var $section = $("#link-section").addClass("hidden");
+    var readOnly = !TichuPlayers.isOwn(player);
+    $("#readonly-banner").toggleClass("hidden", !readOnly);
+    $("#player-name").prop("disabled", readOnly);
+    $("#archive-player, #reset-player-stats").toggleClass("hidden", readOnly);
+    if (!L || !L.isSignedIn()) return;
+
+    var me = L.myUid();
+    var $status = $("#link-status").text("");
+    var $buttons = $("#link-buttons").empty();
+    function button(label, handler) {
+      $buttons.append($('<button type="button" class="btn-flat"></button>').text(label).on("click", handler));
+    }
+
+    if (readOnly) {
+      if (player.linkedUid === me) {
+        $status.text("Linked to your account.");
+        button("Unlink my account", function () {
+          L.unlink(player.id, "Unlink your account from " + player.name + "? You will stop seeing this host's games live.");
+        });
+      }
+    } else if (player.linkedUid) {
+      $status.text("Linked to " + (player.linkedLabel || "a user account") + ".");
+      button("Unlink account", function () { L.unlink(player.id); });
+    } else {
+      var alreadyMe = TichuPlayers.getPlayers({ ownOnly: true }).some(function (p) { return p.linkedUid === me; });
+      if (!alreadyMe) button("This is me", function () { L.thisIsMe(player.id); });
+      button("Link to user account", function () { L.invite(player.id); });
+    }
+    $section.toggleClass("hidden", !$buttons.children().length && !$status.text());
   }
 
   function startRename() {
     var $name = $("#player-name");
-    if ($name.is("input")) return;
+    if ($name.is("input") || !TichuPlayers.isOwn(player)) return;
 
     var originalName = player.name;
     var $input = $('<input type="text" id="player-name" class="player-name-input">').val(originalName);

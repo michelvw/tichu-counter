@@ -73,10 +73,22 @@
 
   // ---- Players -----------------------------------------------------
 
+  function currentUid() {
+    return localStorage.getItem("tichuCloudUser") || null;
+  }
+
+  // Records without ownerUid were created on this device by the current user.
+  function isOwn(record) {
+    return !record || !record.ownerUid || record.ownerUid === currentUid();
+  }
+
   function getPlayers(opts) {
     var players = readJSON(KEYS.PLAYERS);
     if (opts && opts.activeOnly) {
       players = players.filter(function (p) { return p.active; });
+    }
+    if (opts && opts.ownOnly) {
+      players = players.filter(isOwn);
     }
     return players;
   }
@@ -122,6 +134,7 @@
     var players = readJSON(KEYS.PLAYERS);
     var player = players.filter(function (p) { return p.id === id; })[0];
     if (!player) throw new Error("Player not found.");
+    if (!isOwn(player)) throw new Error("Only the host can delete " + player.name + ".");
     if (player.active) throw new Error("Archive " + player.name + " before deleting.");
     var inOpenSession = readJSON(KEYS.SESSIONS).some(function (s) {
       return (s.status === "active" || s.status === "paused") && s.playerIds.indexOf(id) !== -1;
@@ -156,7 +169,7 @@
 
   // Only one session may be active or paused at a time.
   function getActiveOrPausedSession() {
-    return getSessions().filter(function (s) { return s.status === "active" || s.status === "paused"; })[0] || null;
+    return getSessions().filter(function (s) { return isOwn(s) && (s.status === "active" || s.status === "paused"); })[0] || null;
   }
 
   function getSessionHistory() {
@@ -1044,6 +1057,8 @@
     KEYS: KEYS,
     // players
     getPlayers: getPlayers,
+    isOwn: isOwn,
+    currentUid: currentUid,
     getPlayer: getPlayer,
     addPlayer: addPlayer,
     renamePlayer: renamePlayer,

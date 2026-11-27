@@ -137,7 +137,8 @@
     };
   }
 
-  function exportData() {
+  function exportData(opts) {
+    var cloud = !!(opts && opts.cloud);
     var now = Date.now();
     var winThreshold = Math.max(1, toInt(readRaw("winThreshold"), 500));
     var theme = readRaw("tichuTheme");
@@ -146,7 +147,11 @@
     var currentSessionGame = games.filter(function (g) {
       return g.id === currentId && (!g.winner || g.pendingNextGame);
     })[0];
-    var exportedGames = games.map(function (g) { return exportGame(g, winThreshold); });
+    var exportedGames = games.map(function (g) {
+      var out = exportGame(g, winThreshold);
+      if (cloud && g.ownerUid) out.ownerUid = g.ownerUid;
+      return out;
+    });
     var quick = currentSessionGame ? null : exportQuickGame(winThreshold, now);
     if (quick) exportedGames.push(quick);
 
@@ -166,17 +171,25 @@
         quickTeamBName: nonEmptyString(readRaw("teamBName"), "Team B")
       },
       players: readList("tichuPlayers").map(function (p) {
-        return {
+        var out = {
           id: p.id, name: p.name, active: p.active !== false,
           createdAt: p.createdAt || now, statsResetAt: p.statsResetAt || null
         };
+        if (cloud) {
+          if (p.ownerUid) out.ownerUid = p.ownerUid;
+          if (p.linkedUid) out.linkedUid = p.linkedUid;
+          if (p.linkedLabel) out.linkedLabel = p.linkedLabel;
+        }
+        return out;
       }),
       sessions: readList("tichuSessions").map(function (s) {
-        return {
+        var out = {
           id: s.id, status: s.status, playerIds: list(s.playerIds),
           nextPoolStart: s.nextPoolStart || 0, pauseLog: list(s.pauseLog),
           startedAt: s.startedAt || now, endedAt: s.endedAt || null
         };
+        if (cloud && s.ownerUid) out.ownerUid = s.ownerUid;
+        return out;
       }),
       games: exportedGames
     };
@@ -276,6 +289,7 @@
     if (typeof g.firstRestingTeam === "number") game.firstRestingTeam = g.firstRestingTeam;
     if (g.pendingNextGame) game.pendingNextGame = true;
     if (g.nextDealerPlayerId) game.nextDealerPlayerId = g.nextDealerPlayerId;
+    if (g.ownerUid) game.ownerUid = g.ownerUid;
     game.rounds = list(g.rounds)
       .slice().sort(function (a, b) { return (a.roundNumber || 0) - (b.roundNumber || 0); })
       .map(function (r) { return importRound(game, r); });
@@ -305,17 +319,23 @@
     var playerIds = {};
     var players = list(data.players).filter(function (p) { return p && p.id; }).map(function (p) {
       playerIds[p.id] = true;
-      return {
+      var player = {
         id: p.id, name: nonEmptyString(p.name, "Player"), active: p.active !== false,
         createdAt: p.createdAt || Date.now(), statsResetAt: p.statsResetAt || null
       };
+      if (p.ownerUid) player.ownerUid = p.ownerUid;
+      if (p.linkedUid) player.linkedUid = p.linkedUid;
+      if (p.linkedLabel) player.linkedLabel = p.linkedLabel;
+      return player;
     });
     var sessions = list(data.sessions).filter(function (s) { return s && s.id; }).map(function (s) {
-      return {
+      var session = {
         id: s.id, status: s.status === "paused" || s.status === "ended" ? s.status : "active",
         startedAt: s.startedAt || Date.now(), endedAt: s.endedAt || null, playerIds: list(s.playerIds),
         nextPoolStart: s.nextPoolStart || 0, pauseLog: list(s.pauseLog)
       };
+      if (s.ownerUid) session.ownerUid = s.ownerUid;
+      return session;
     });
     var sessionIds = {};
     sessions.forEach(function (s) { sessionIds[s.id] = true; });

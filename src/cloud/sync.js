@@ -1,5 +1,5 @@
-import {
-  collection, deleteDoc, deleteField, doc, getDoc, getDocs, query, serverTimestamp, setDoc,
+﻿import {
+  arrayUnion, collection, deleteDoc, deleteField, doc, getDoc, getDocs, query, serverTimestamp, setDoc,
   updateDoc, where, writeBatch,
 } from "firebase/firestore";
 import { getServices } from "./firebase.js";
@@ -170,8 +170,9 @@ function userPayload(canon, authUser, extra) {
 function buildDocs(canon, uid) {
   const quickId = "q_" + uid;
   const docs = { players: new Map(), sessions: new Map(), games: new Map() };
-  (canon.players || []).filter((p) => isId(p.id)).forEach((p) => docs.players.set(p.id, playerPayload(p, uid)));
-  (canon.sessions || []).filter((s) => isId(s.id)).forEach((s) => {
+  const mine = (x) => !x.ownerUid || x.ownerUid === uid;
+  (canon.players || []).filter((p) => isId(p.id) && mine(p)).forEach((p) => docs.players.set(p.id, playerPayload(p, uid)));
+  (canon.sessions || []).filter((s) => isId(s.id) && mine(s)).forEach((s) => {
     const payload = sessionPayload(s, uid);
     if (payload.playerIds.length >= 4 && payload.playerIds.length <= 6) docs.sessions.set(s.id, payload);
   });
@@ -185,7 +186,7 @@ function buildDocs(canon, uid) {
       }
       return;
     }
-    if (isId(g.id) && docs.sessions.has(g.sessionId)) docs.games.set(g.id, gamePayload(g, uid, false));
+    if (isId(g.id) && mine(g) && docs.sessions.has(g.sessionId)) docs.games.set(g.id, gamePayload(g, uid, false));
   });
   const prefs = { ...canon.preferences, quickGameId: quickRemapped ? quickId : null };
   return { docs, prefs: { ...canon, preferences: prefs } };
@@ -204,9 +205,13 @@ async function fetchRemote(uid) {
 function remoteToCanonical(remote) {
   const u = remote.user || {};
   const players = [];
-  remote.players.forEach((d, id) => players.push({ id, name: d.name, active: d.active !== false, createdAt: d.createdAtMs, statsResetAt: d.statsResetAt || null }));
+  remote.players.forEach((d, id) => players.push({
+    id, name: d.name, active: d.active !== false, createdAt: d.createdAtMs, statsResetAt: d.statsResetAt || null,
+    ownerUid: d.ownerUid, linkedUid: d.linkedUid || null, linkedLabel: d.linkedLabel || null,
+  }));
   const sessions = [];
   remote.sessions.forEach((d, id) => sessions.push({
+    ownerUid: d.ownerUid,
     id, status: d.status, playerIds: d.playerIds, nextPoolStart: d.nextPoolStart || 0,
     pauseLog: d.pauseLog || [], startedAt: d.startedAtMs, endedAt: d.endedAtMs || null,
   }));
@@ -214,6 +219,7 @@ function remoteToCanonical(remote) {
   remote.games.forEach((d, id) => {
     const fs = d.finalScores;
     games.push({
+      ownerUid: d.ownerUid,
       id, sessionId: d.sessionId || null, mode: d.mode,
       teams: d.mode === "threeTeams" ? [d.team0, d.team1, d.team2] : d.mode === "rotation" ? [] : [d.team0, d.team1],
       fixedTeam: d.fixedTeam, pool: d.pool,
@@ -278,7 +284,11 @@ function reconcile(col, payload, existing) {
 async function pushLocal(user, options = {}) {
   const uid = user.uid;
   const remote = await fetchRemote(uid);
-  const { docs, prefs } = buildDocs(backup().exportData(), uid);
+  const canonical = backup().exportData({ cloud: true });
+  const { docs, prefs } = buildDocs(canonical, uid);
+  const linked = new Map();
+  (canonical.players || []).forEach((p) => { if (p.linkedUid && (!p.ownerUid || p.ownerUid === uid)) linked.set(p.id, p.linkedUid); });
+  const participantsFor = (payload) => [...new Set([uid, ...(payload.playerIds || []).map((id) => linked.get(id)).filter(Boolean)])].slice(0, 10);
   const removals = [];
   const writes = [];
 
@@ -299,7 +309,7 @@ async function pushLocal(user, options = {}) {
       const created = !existing || existing.ownerUid !== uid || IMMUTABLE[col].some((k) => JSON.stringify(stable(existing[k] ?? null)) !== JSON.stringify(stable(payload[k] ?? null)));
       if (!created && comparable(existing) === comparable(payload)) return;
       if (created) {
-        const extra = col === "players" ? { memberUids: [uid] } : { participantUids: [uid] };
+        const extra = col === "players" ? { memberUids: [uid] } : { participantUids: participantsFor(payload) };
         writes.push((b, db) => b.set(doc(db, col, id), { ...payload, ...extra, createdAt: serverTimestamp(), updatedAt: serverTimestamp() }));
       } else {
         const patch = { ...payload, updatedAt: serverTimestamp() };
@@ -449,6 +459,149 @@ export function flush() {
       console.warn("Cloud sync failed; will retry later.", error);
     }
   });
+}
+
+// ---- Player linking -----------------------------------------------------------
+
+const CODE_ALPHABET = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
+const INVITE_TTL_MS = 7 * 24 * 60 * 60 * 1000;
+
+function makeCode() {
+  const bytes = new Uint8Array(8);
+  crypto.getRandomValues(bytes);
+  return Array.from(bytes, (b) => CODE_ALPHABET[b % CODE_ALPHABET.length]).join("");
+}
+
+function labelFor(user) {
+  return text(user.displayName || user.email, 80, "Player");
+}
+
+async function settle() {
+  await flush();
+  await busy;
+}
+
+export async function refreshFromCloud(user) {
+  await settle();
+  const remote = await fetchRemote(user.uid);
+  applyCanonical(remoteToCanonical(remote));
+  setSynced(remote);
+}
+
+export async function linkSelf(user, playerId) {
+  await settle();
+  const { db } = getServices();
+  const remote = await fetchRemote(user.uid);
+  const player = remote.players.get(playerId);
+  if (!player || player.ownerUid !== user.uid) throw new Error("Player isn't synced yet. Try again in a moment.");
+  if (player.linkedUid) throw new Error("This player is already linked.");
+  const taken = [...remote.players.values()].some((p) => p.ownerUid === user.uid && p.linkedUid === user.uid);
+  if (taken) throw new Error("You are already linked to another player.");
+  await updateDoc(doc(db, "players", playerId), {
+    linkedUid: user.uid, linkedLabel: labelFor(user), memberUids: [user.uid], updatedAt: serverTimestamp(),
+  });
+  await refreshFromCloud(user);
+}
+
+export async function createInvite(user, playerId) {
+  await settle();
+  const { db } = getServices();
+  const remote = await fetchRemote(user.uid);
+  const player = remote.players.get(playerId);
+  if (!player || player.ownerUid !== user.uid) throw new Error("Player isn't synced yet. Try again in a moment.");
+  if (player.linkedUid) throw new Error("This player is already linked.");
+  const owned = (map) => [...map.entries()].filter(([, d]) => d.ownerUid === user.uid && (d.playerIds || []).includes(playerId)).map(([id]) => id);
+  const code = makeCode();
+  const expiresAtMs = Date.now() + INVITE_TTL_MS;
+  await setDoc(doc(db, "playerInvites", code), {
+    ownerUid: user.uid,
+    playerId,
+    playerName: text(player.name, 60, "Player"),
+    sessionIds: owned(remote.sessions).slice(0, 500),
+    gameIds: owned(remote.games).slice(0, 1000),
+    status: "pending",
+    expiresAtMs,
+    createdAt: serverTimestamp(),
+    updatedAt: serverTimestamp(),
+  });
+  return { code, expiresAtMs };
+}
+
+async function addParticipant(col, ids, uid, playerId) {
+  const { db } = getServices();
+  const patch = () => ({ participantUids: arrayUnion(uid), lastLinkedPlayerId: playerId, updatedAt: serverTimestamp() });
+  for (let i = 0; i < ids.length; i += 10) {
+    const chunk = ids.slice(i, i + 10);
+    try {
+      const batch = writeBatch(db);
+      chunk.forEach((id) => batch.update(doc(db, col, id), patch()));
+      await batch.commit();
+    } catch (error) {
+      for (const id of chunk) {
+        try { await updateDoc(doc(db, col, id), patch()); } catch (e) { console.warn("Could not share " + col + "/" + id, e); }
+      }
+    }
+  }
+}
+
+export async function claimInvite(user, rawCode) {
+  const code = String(rawCode || "").trim().toUpperCase();
+  if (!isId(code)) throw new Error("Enter a valid invite code.");
+  await settle();
+  const { db } = getServices();
+  let snap;
+  try {
+    snap = await getDoc(doc(db, "playerInvites", code));
+  } catch (error) {
+    throw new Error("That invite code was not found.");
+  }
+  if (!snap.exists()) throw new Error("That invite code was not found.");
+  const invite = snap.data();
+  if (invite.ownerUid === user.uid) throw new Error("You can't claim your own invite.");
+  if (invite.status !== "pending") throw new Error("This invite was already used or revoked.");
+  if (invite.expiresAtMs <= Date.now()) throw new Error("This invite has expired.");
+  const batch = writeBatch(db);
+  batch.update(doc(db, "players", invite.playerId), {
+    linkedUid: user.uid,
+    linkedLabel: labelFor(user),
+    memberUids: [invite.ownerUid, user.uid],
+    lastClaimCode: code,
+    updatedAt: serverTimestamp(),
+  });
+  batch.update(doc(db, "playerInvites", code), { status: "claimed", claimedByUid: user.uid, updatedAt: serverTimestamp() });
+  await batch.commit();
+  await addParticipant("sessions", invite.sessionIds || [], user.uid, invite.playerId);
+  await addParticipant("games", invite.gameIds || [], user.uid, invite.playerId);
+  await refreshFromCloud(user);
+  return invite.playerName;
+}
+
+export async function unlinkPlayer(user, playerId) {
+  await settle();
+  const { db } = getServices();
+  const remote = await fetchRemote(user.uid);
+  const player = remote.players.get(playerId);
+  if (!player) throw new Error("Player not found.");
+  const isOwner = player.ownerUid === user.uid;
+  if (!isOwner && player.linkedUid !== user.uid) throw new Error("You can't unlink this player.");
+  await updateDoc(doc(db, "players", playerId), {
+    linkedUid: deleteField(), linkedLabel: deleteField(), memberUids: [player.ownerUid], updatedAt: serverTimestamp(),
+  });
+  if (isOwner) {
+    const linked = new Map();
+    remote.players.forEach((p, id) => { if (p.ownerUid === user.uid && id !== playerId && p.linkedUid) linked.set(id, p.linkedUid); });
+    const fix = async (col, map) => {
+      for (const [id, d] of map) {
+        if (d.ownerUid !== user.uid || !(d.playerIds || []).includes(playerId)) continue;
+        const next = [...new Set([user.uid, ...(d.playerIds || []).map((pid) => linked.get(pid)).filter(Boolean)])].slice(0, 10);
+        if (next.length === (d.participantUids || []).length && next.every((u) => d.participantUids.includes(u))) continue;
+        await updateDoc(doc(db, col, id), { participantUids: next, updatedAt: serverTimestamp() });
+      }
+    };
+    await fix("sessions", remote.sessions);
+    await fix("games", remote.games);
+  }
+  await refreshFromCloud(user);
 }
 
 export function clearLocal() {
