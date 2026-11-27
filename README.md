@@ -70,6 +70,24 @@ scores, Tichu and Grand Tichu records, double wins, and session participation.
 
 ![Player statistics](screenshots/player.jpg?raw=true "Player statistics")
 
+### Sign in, sync and live sessions
+
+Signing in with Google is optional. Guests keep everything on the device.
+
+- **Backup:** export and import all data as JSON from Settings.
+- **Cloud sync:** when signed in, players, sessions and games sync to Firestore
+  (the same database as the companion Android app), so data follows you across
+  devices and between the PWA and the Android app.
+- **Player linking:** invite other players with a code so they are linked to
+  your roster and can see shared sessions.
+- **Real names:** the host writes player names onto sessions and games, so
+  viewers see actual names without access to the host's private roster.
+- **Live view:** a user is either a host or a viewer. While another player
+  hosts a live session, your scoreboard shows that game read-only (banner,
+  scores, dealer, who sits out, refreshed about every 15 seconds) and the
+  Sessions page shows a "Live shared session" card. Shared sessions are
+  marked "Shared" in the history and cannot be changed or deleted by viewers.
+
 ## Install as an app
 
 Tichu Counter is a Progressive Web App. From a supported browser, use the
@@ -81,20 +99,26 @@ work without an internet connection after the first visit.
 
 ## Data and privacy
 
-There is no server, account, or database. The app stores the current game,
+By default there is no server or account. The app stores the current game,
 round history, players, sessions, statistics, rankings, and preferences in
 your browser's `localStorage`.
 
 This also means that clearing the browser's site data removes the saved
-information. Data is not automatically synchronised between devices.
+information. Data is only synchronised between devices if you sign in with
+Google; guests stay local. Synced data is stored in Firebase (Firestore), and
+only the host can modify their own sessions and games.
 
 ## Run locally
 
-The app is a static website and does not require a build step or backend.
+The pages are static. Only the optional Firebase module (`js/cloud.js`) is
+bundled with [Vite](https://vite.dev); sign-in needs the `VITE_FIREBASE_*`
+variables at build time, and guest mode works without it.
 
 ```bash
 git clone https://github.com/michelvw/tichu-counter.git
 cd tichu-counter
+npm install
+npm run build
 python -m http.server 8000
 ```
 
@@ -115,6 +139,7 @@ node dealer-rotation-test.js         # dealer fairness / alternation / sit-out s
 node six-player-test.js              # three-team rotation, scoring and history
 node theme-test.js                   # theme preference, chart and offline caching
 node settings-test.js                # target settings and in-progress games
+node live-view-test.js               # read-only live view of shared sessions
 ```
 
 The first three tests expect the app at <http://localhost:8000>. The
@@ -127,6 +152,7 @@ six-player, theme, and settings tests start their own servers on available local
 - Materialize CSS
 - Chart.js
 - Browser `localStorage`
+- Optional Firebase Auth and Firestore sync, bundled with Vite
 - Service worker and web app manifest
 
 ## Repository layout
@@ -141,6 +167,8 @@ six-player, theme, and settings tests start their own servers on available local
 | `session-details.html` | Session statistics and game details |
 | `players.html` | Player roster management |
 | `player-stats.html` | Individual player statistics |
+| `welcome.html` | Sign-in / guest start screen |
+| `src/cloud/` | Firebase sign-in and Firestore sync (bundled to `js/cloud.js`) |
 | `js/` | Application logic and bundled front-end dependencies |
 | `service-worker.js` | Offline caching |
 | `manifest.json` | Progressive Web App configuration |
