@@ -35,6 +35,7 @@ const seed = {
     const base = 'http://localhost:' + server.address().port + '/';
     browser = await puppeteer.launch({ headless: 'new', args: ['--no-sandbox'] });
     const page = await browser.newPage();
+    await page.setBypassServiceWorker(true);
     await page.setRequestInterception(true);
     page.on('request', (r) => (/js\/cloud\.js/.test(r.url()) ? r.abort() : r.continue()));
     await page.goto(base + 'index.html');
@@ -89,6 +90,8 @@ const seed = {
     server.close();
   }
 })();
+
+
 
 
 
