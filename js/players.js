@@ -117,6 +117,19 @@
         renderRoster();
       });
       $li.append($unarchive);
+      var $delete = $('<a href="#" class="secondary-content red-text" title="Delete permanently" style="margin-right:16px">Delete</a>');
+      $delete.on("click", function (e) {
+        e.preventDefault();
+        if (!window.confirm("Permanently delete " + p.name + "? This can't be undone. Past games and sessions stay intact for the other players.")) return;
+        try {
+          TichuPlayers.deletePlayer(p.id);
+        } catch (err) {
+          window.alert(err.message);
+          return;
+        }
+        renderRoster();
+      });
+      $li.append($delete);
       $archived.append($li);
     });
     $("#toggle-archived").text(archived.length ? "Show archived players (" + archived.length + ")" : "No archived players");

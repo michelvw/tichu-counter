@@ -427,7 +427,11 @@
             'aria-valuetext': scores[index] + ' points out of ' + winThreshold
           })
           .append($('<div class="three-team-progress-fill"></div>').css('width', (progress / goal * 100) + '%')));
-        if (index === lineup.restingTeam) $score.append($('<span class="resting-label"></span>').text(currentGame.winner ? 'Sat out' : 'Sitting out'));
+        var isResting = index === lineup.restingTeam;
+        $score.append($('<span class="resting-label"></span>')
+          .toggleClass('resting-placeholder', !isResting)
+          .attr('aria-hidden', isResting ? null : 'true')
+          .text(isResting ? (currentGame.winner ? 'Sat out' : 'Sitting out') : 'Sitting out'));
         $scores.append($score);
       });
       $('#btn-next').toggleClass('disabled', !!currentGame.winner)

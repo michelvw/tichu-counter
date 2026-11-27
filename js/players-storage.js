@@ -118,9 +118,21 @@
   function archivePlayer(id) { return setPlayerActive(id, false); }
   function unarchivePlayer(id) { return setPlayerActive(id, true); }
 
+  function deletePlayer(id) {
+    var players = readJSON(KEYS.PLAYERS);
+    var player = players.filter(function (p) { return p.id === id; })[0];
+    if (!player) throw new Error("Player not found.");
+    if (player.active) throw new Error("Archive " + player.name + " before deleting.");
+    var inOpenSession = readJSON(KEYS.SESSIONS).some(function (s) {
+      return (s.status === "active" || s.status === "paused") && s.playerIds.indexOf(id) !== -1;
+    });
+    if (inOpenSession) throw new Error("End the active session before deleting " + player.name + ".");
+    writeJSON(KEYS.PLAYERS, players.filter(function (p) { return p.id !== id; }));
+  }
+
   function teamNameString(playerIds) {
     return playerIds
-      .map(function (id) { var p = getPlayer(id); return p ? p.name : "?"; })
+      .map(function (id) { var p = getPlayer(id); return p ? p.name : "Deleted player"; })
       .join(" & ");
   }
 
@@ -1037,6 +1049,7 @@
     renamePlayer: renamePlayer,
     archivePlayer: archivePlayer,
     unarchivePlayer: unarchivePlayer,
+    deletePlayer: deletePlayer,
     teamNameString: teamNameString,
     previewLineup: previewLineup,
     previewLineupForSession: previewLineupForSession,

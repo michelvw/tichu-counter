@@ -54,9 +54,27 @@
           <p id="threshold-status" role="status" aria-live="polite"></p>
         </form>
       </section>
+      <section class="card-panel settings-section" aria-labelledby="backup-heading">
+        <h5 id="backup-heading">Backup</h5>
+        <p class="helper-text">Move your data between this app and the Tichu Counter Android app.</p>
+        <button type="button" class="btn" id="export-backup">Export backup (JSON)</button>
+        <hr>
+        <label for="import-file">Import backup</label>
+        <input id="import-file" type="file" accept=".json,application/json">
+        <label for="import-text">Or paste JSON</label>
+        <textarea id="import-text" class="materialize-textarea browser-default" rows="4"></textarea>
+        <button type="button" class="btn" id="import-preview">Preview import</button>
+        <div id="import-confirm" hidden>
+          <p id="import-summary" role="status"></p>
+          <p class="helper-text">Importing replaces all data on this device.</p>
+          <button type="button" class="btn" id="import-apply">Replace data and import</button>
+        </div>
+        <p id="backup-status" role="status" aria-live="polite"></p>
+      </section>
     </main>
     <script src="js/storage.js"></script>
     <script src="js/players-storage.js"></script>
+    <script src="js/backup.js"></script>
     <script src="js/settings.js"></script>
   </body>
 </html>

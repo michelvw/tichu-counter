@@ -531,6 +531,7 @@ table thead th {
   background-color: var(--team-color);
 }
 .three-team-score .resting-label { color: var(--text-muted); font-size: 0.75rem; }
+.three-team-score .resting-placeholder { visibility: hidden; }
 .team-index-0 { --team-color: var(--team-a); }
 .team-index-1 { --team-color: var(--team-b); }
 .team-index-2 { --team-color: var(--team-c); }

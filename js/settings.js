@@ -58,4 +58,65 @@
   });
 
   showSavedThreshold();
+
+  var backupStatus = document.getElementById("backup-status");
+  var importText = document.getElementById("import-text");
+  var importFile = document.getElementById("import-file");
+  var importConfirm = document.getElementById("import-confirm");
+  var pending = null;
+
+  document.getElementById("export-backup").addEventListener("click", function () {
+    var blob = new Blob([TichuBackup.exportJSON()], { type: "application/json" });
+    var link = document.createElement("a");
+    link.href = URL.createObjectURL(blob);
+    link.download = "tichu-counter-backup-" + new Date().toISOString().slice(0, 10) + ".json";
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+    setTimeout(function () { URL.revokeObjectURL(link.href); }, 1000);
+    backupStatus.textContent = "Backup exported.";
+  });
+
+  function preview(text) {
+    pending = null;
+    importConfirm.hidden = true;
+    try {
+      pending = TichuBackup.parse(text);
+    } catch (error) {
+      backupStatus.textContent = error.message;
+      return;
+    }
+    backupStatus.textContent = "";
+    document.getElementById("import-summary").textContent = TichuBackup.summarize(pending);
+    importConfirm.hidden = false;
+  }
+
+  importFile.addEventListener("change", function () {
+    var file = importFile.files[0];
+    if (!file) return;
+    var reader = new FileReader();
+    reader.onload = function () { preview(String(reader.result)); };
+    reader.onerror = function () { backupStatus.textContent = "Could not read the file."; };
+    reader.readAsText(file);
+  });
+
+  document.getElementById("import-preview").addEventListener("click", function () {
+    if (!importText.value.trim()) {
+      backupStatus.textContent = "Select a file or paste JSON first.";
+      return;
+    }
+    preview(importText.value);
+  });
+
+  document.getElementById("import-apply").addEventListener("click", function () {
+    if (!pending) return;
+    if (!window.confirm("Replace all data on this device with the imported data? This can't be undone.")) return;
+    TichuBackup.applyImport(pending);
+    pending = null;
+    importConfirm.hidden = true;
+    importFile.value = "";
+    importText.value = "";
+    showSavedThreshold();
+    backupStatus.textContent = "Import complete.";
+  });
 })();
