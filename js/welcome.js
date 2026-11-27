@@ -33,6 +33,11 @@
     });
   });
 
+  // Covers sign-ins that complete without the popup promise resolving.
+  cloud.onAuthChange(function (user) {
+    if (user) enter(user);
+  });
+
   // Returning from a redirect-based sign-in (iOS Home Screen mode).
   cloud.completeRedirectSignIn().then(function (user) {
     if (user) enter(user);
