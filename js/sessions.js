@@ -229,7 +229,7 @@
 
       var $li = $('<li class="collection-item game-row"></li>');
       $li.append($("<span></span>").text(label));
-      if ((g.winner || !onDeleteGame) && (g.rounds || []).length) {
+      if (g.winner && (g.rounds || []).length) {
         $li.append($('<a class="secondary-content icon-action" title="View rounds"><i class="material-icons">chevron_right</i></a>')
           .attr("href", "round-scores.html?game=" + encodeURIComponent(g.id)));
       }
@@ -413,28 +413,42 @@
       $summary.on("click", function () { $detail.toggleClass("hidden"); });
       $li.append($summary);
       if (mine) $li.append($deleteSession);
-      else $summary.append($('<span class="helper-text"></span>').text("Hosted by another player (read-only)"));
+      else $summary.find("strong").append($('<span class="shared-badge"></span>').text("Shared"));
       $li.append($detail);
       $list.append($li);
     });
   }
 
-  function renderLiveViews() {
-    $("#live-sessions").remove();
-    if (!$("#session-panel").length) return;
-    var live = TichuPlayers.getSessions().filter(function (s) {
-      return !TichuPlayers.isOwn(s) && (s.status === "active" || s.status === "paused");
-    });
-    if (!live.length) return;
-    var $box = $('<section id="live-sessions"></section>');
-    live.forEach(function (s) {
-      var games = TichuPlayers.getSessionGames(s.id);
-      $box.append('<div class="card-panel" id="readonly-banner">Live view \u2014 hosted by another player (read-only)</div>');
-      $box.append($('<p class="helper-text"></p>').text(s.playerIds.map(playerName).join(" \u00b7 ")));
-      if (games.length) $box.append(renderGamesList(games, null));
-      $box.append($('<a class="btn-flat"></a>').attr("href", "session-details.html?live=" + encodeURIComponent(s.id)).text("View details"));
-    });
-    $("#session-panel").after($box);
+  function renderSharedSessionPanel(session) {
+    var $panel = $("#session-panel").empty();
+    var game = TichuPlayers.getLiveSharedGame(session);
+    var paused = session.status === "paused";
+    $panel.append($('<div class="page-heading"></div>').append(
+      $("<h4></h4>").text("Live shared session").append(
+        $('<span class="shared-badge" id="shared-live-badge"></span>').text("SHARED \u00b7 LIVE"),
+        $('<span class="shared-badge"></span>').text(paused ? "PAUSED" : "ACTIVE")
+      ),
+      $('<p class="helper-text"></p>').text(session.playerIds.map(playerName).join(" \u00b7 "))
+    ));
+    $panel.append($('<p class="helper-text" id="shared-session-note"></p>').text("Hosted by another player \u2014 live scores sync automatically."));
+    if (game) {
+      $panel.append($('<div class="session-status-card"></div>').append(
+        $('<span class="status-label">Game in progress</span>'),
+        $("<strong></strong>").text(lineupSummary(game)),
+        $('<div class="session-actions"></div>').append(
+          '<a href="index.html" id="view-scoreboard-btn" class="waves-effect waves-light btn"><i class="material-icons left">play_arrow</i>View scoreboard</a>'
+        )
+      ));
+    } else {
+      $panel.append($('<div class="session-status-card"></div>').append(
+        $('<span class="status-label">Between games</span>'),
+        $('<p class="helper-text"></p>').text("Waiting for the host to start the next game.")
+      ));
+    }
+    $panel.append($('<div class="session-actions session-actions-secondary"></div>').append(
+      $('<a class="waves-effect waves-light btn-flat"><i class="material-icons left">assessment</i><span class="btn-label">View details</span></a>')
+        .attr("href", "session-details.html?live=" + encodeURIComponent(session.id))
+    ));
   }
 
   function startLivePolling() {
@@ -474,12 +488,13 @@
   function renderAll() {
     if ($("#session-panel").length) {
       var session = TichuPlayers.getActiveOrPausedSession();
+      var shared = TichuPlayers.getLiveSharedSession();
       if (session) renderActiveSessionPanel(session);
+      else if (shared) renderSharedSessionPanel(shared);
       else renderStartSessionForm();
     }
     if ($("#session-history-list").length) renderHistory();
     if ($("#session-details-panel").length) renderDetails();
-    renderLiveViews();
   }
 
   renderAll();

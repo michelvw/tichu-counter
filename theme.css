@@ -1052,3 +1052,6 @@ nav ul a[data-label]::after {
 .player-badge.badge-you{background:#104832;color:#fff}
 .player-badge.badge-linked{background:#bbdefb;color:#0d47a1}
 #readonly-banner{background:#fff3cd;color:#664d03}
+body.live-view .input-fields,body.live-view #btn-next,body.live-view #undo,body.live-view #reset{display:none!important}
+body.live-view .container{display:none}
+.shared-badge{margin-left:8px;padding:1px 8px;border-radius:10px;font-size:.7rem;background:#e0e0e0;color:#424242;vertical-align:middle}

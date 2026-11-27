@@ -183,6 +183,19 @@
     return getSessions().filter(function (s) { return isOwn(s) && (s.status === "active" || s.status === "paused"); })[0] || null;
   }
 
+  // View mode: a signed-in user with no session of their own follows another
+  // host's active/paused session. A user is either a host or a viewer.
+  function getLiveSharedSession() {
+    if (!currentUid() || getActiveOrPausedSession()) return null;
+    return getSessions().filter(function (s) { return !isOwn(s) && (s.status === "active" || s.status === "paused"); })[0] || null;
+  }
+
+  function getLiveSharedGame(session) {
+    if (!session) return null;
+    var games = getGames().filter(function (g) { return g.sessionId === session.id && (!g.winner || g.pendingNextGame); });
+    return games[games.length - 1] || null;
+  }
+
   function getSessionHistory() {
     return getSessions()
       .filter(function (s) { return s.status === "ended"; })
@@ -1071,6 +1084,8 @@
     currentUid: currentUid,
     getPlayer: getPlayer,
     resolveName: resolveName,
+    getLiveSharedSession: getLiveSharedSession,
+    getLiveSharedGame: getLiveSharedGame,
     addPlayer: addPlayer,
     renamePlayer: renamePlayer,
     archivePlayer: archivePlayer,
