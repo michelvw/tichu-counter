@@ -458,8 +458,7 @@
       if (isThreeTeams) {
         label += ' \u00b7 ' + TichuPlayers.teamNameString(lineup.sittingOut) + (currentGame.winner ? ' sat out' : ' sit out');
       } else {
-        var sittingOutPlayer = TichuPlayers.getPlayer(lineup.sittingOut);
-        label += ' \u00b7 ' + (sittingOutPlayer ? sittingOutPlayer.name : '?') + ' sits out';
+        label += ' \u00b7 ' + TichuPlayers.resolveName(lineup.sittingOut, '?') + ' sits out';
       }
     }
 
@@ -472,8 +471,7 @@
     // so quick games never show this tag.
     var dealerId = TichuPlayers.getCurrentRoundDealer(currentGame);
     if (dealerId && !(isThreeTeams && currentGame.winner)) {
-      var dealer = TichuPlayers.getPlayer(dealerId);
-      $('#dealer-tag-text').text('Dealer: ' + (dealer ? dealer.name : '?'));
+      $('#dealer-tag-text').text('Dealer: ' + TichuPlayers.resolveName(dealerId, '?'));
       $('#dealer-tag').removeClass('hidden');
     } else {
       $('#dealer-tag').addClass('hidden');

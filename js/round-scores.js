@@ -87,8 +87,7 @@ const anyDealers = roundDealerIds.some((id) => !!id);
 function dealerNameFor(roundIndex) {
   const id = roundDealerIds[roundIndex];
   if (!id || typeof TichuPlayers === "undefined") return "";
-  const player = TichuPlayers.getPlayer(id);
-  return player ? player.name : "(removed player)";
+  return TichuPlayers.resolveName(id, "(removed player)");
 }
 
 document.getElementById("round-counter-display").textContent = roundCounterText;

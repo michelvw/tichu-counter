@@ -97,6 +97,17 @@
     return getPlayers().filter(function (p) { return p.id === id; })[0] || null;
   }
 
+  // Own players first, then names shared by hosts in session/game docs.
+  function resolveName(id, fallback) {
+    var p = getPlayer(id);
+    if (p) return p.name;
+    try {
+      var shared = JSON.parse(localStorage.getItem("tichuSharedNames") || "{}");
+      if (shared[id]) return shared[id];
+    } catch (e) { /* ignore */ }
+    return fallback;
+  }
+
   function addPlayer(name) {
     name = (name || "").trim();
     if (!name) throw new Error("Player name can't be empty.");
@@ -145,7 +156,7 @@
 
   function teamNameString(playerIds) {
     return playerIds
-      .map(function (id) { var p = getPlayer(id); return p ? p.name : "Deleted player"; })
+      .map(function (id) { return resolveName(id, "Deleted player"); })
       .join(" & ");
   }
 
@@ -688,10 +699,9 @@
 
     var leaderboard = session.playerIds.map(function (pid) {
       var s = computePlayerSessionStats(pid, sessionId);
-      var p = getPlayer(pid);
       return {
         playerId: pid,
-        playerName: p ? p.name : "(removed player)",
+        playerName: resolveName(pid, "(removed player)"),
         gamesPlayed: s.gamesPlayed,
         gamesWon: s.gamesWon,
         winPct: s.winPct,
@@ -1060,6 +1070,7 @@
     isOwn: isOwn,
     currentUid: currentUid,
     getPlayer: getPlayer,
+    resolveName: resolveName,
     addPlayer: addPlayer,
     renamePlayer: renamePlayer,
     archivePlayer: archivePlayer,

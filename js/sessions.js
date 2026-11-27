@@ -20,8 +20,7 @@
   }
 
   function playerName(id) {
-    var p = TichuPlayers.getPlayer(id);
-    return p ? p.name : (localStorage.getItem("tichuCloudUser") ? "Other player" : "(removed player)");
+    return TichuPlayers.resolveName(id, "(removed player)");
   }
 
   function lineupSummary(obj) {
@@ -121,10 +120,9 @@
       var option = getSessionRankingOption();
       var ranked = session.playerIds.map(function (pid) {
         var stats = TichuPlayers.computePlayerSessionStats(pid, session.id);
-        var p = TichuPlayers.getPlayer(pid);
         return {
           playerId: pid,
-          name: p ? p.name : "(removed player)",
+          name: TichuPlayers.resolveName(pid, "(removed player)"),
           stats: stats,
           value: stats.gamesPlayed ? option.getValue(stats) : null
         };

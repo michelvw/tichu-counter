@@ -167,14 +167,30 @@ function userPayload(canon, authUser, extra) {
   });
 }
 
+function namesFor(ids, nameById) {
+  const out = {};
+  [...new Set(ids || [])].slice(0, 10).forEach((id) => {
+    const n = nameById.get(id);
+    if (n) out[id] = n;
+  });
+  return Object.keys(out).length ? out : undefined;
+}
+
 function buildDocs(canon, uid) {
   const quickId = "q_" + uid;
   const docs = { players: new Map(), sessions: new Map(), games: new Map() };
   const mine = (x) => !x.ownerUid || x.ownerUid === uid;
-  (canon.players || []).filter((p) => isId(p.id) && mine(p)).forEach((p) => docs.players.set(p.id, playerPayload(p, uid)));
+  const nameById = new Map();
+  (canon.players || []).filter((p) => isId(p.id) && mine(p)).forEach((p) => {
+    docs.players.set(p.id, playerPayload(p, uid));
+    const n = typeof p.name === "string" ? p.name.trim().slice(0, 60) : "";
+    if (n) nameById.set(p.id, n);
+  });
   (canon.sessions || []).filter((s) => isId(s.id) && mine(s)).forEach((s) => {
     const payload = sessionPayload(s, uid);
-    if (payload.playerIds.length >= 4 && payload.playerIds.length <= 6) docs.sessions.set(s.id, payload);
+    if (payload.playerIds.length >= 4 && payload.playerIds.length <= 6) {
+      docs.sessions.set(s.id, strip({ ...payload, playerNames: namesFor(payload.playerIds, nameById) }));
+    }
   });
   let quickRemapped = false;
   (canon.games || []).forEach((g) => {
@@ -186,7 +202,10 @@ function buildDocs(canon, uid) {
       }
       return;
     }
-    if (isId(g.id) && mine(g) && docs.sessions.has(g.sessionId)) docs.games.set(g.id, gamePayload(g, uid, false));
+    if (isId(g.id) && mine(g) && docs.sessions.has(g.sessionId)) {
+      const payload = gamePayload(g, uid, false);
+      docs.games.set(g.id, strip({ ...payload, playerNames: namesFor(payload.playerIds, nameById) }));
+    }
   });
   const prefs = { ...canon.preferences, quickGameId: quickRemapped ? quickId : null };
   return { docs, prefs: { ...canon, preferences: prefs } };
@@ -252,9 +271,17 @@ function applyCanonical(canon) {
   }
 }
 
+function storeSharedNames(remote) {
+  const names = {};
+  [remote.sessions, remote.games].forEach((map) => map.forEach((d) => Object.assign(names, d.playerNames || {})));
+  const json = JSON.stringify(names);
+  if (localStorage.getItem("tichuSharedNames") !== json) localStorage.setItem("tichuSharedNames", json);
+}
+
 function setSynced(remote) {
   applying = true;
   try {
+    storeSharedNames(remote);
     localStorage.setItem(HASH_KEY, remoteHash(remote));
     localStorage.removeItem(DIRTY_KEY);
   } finally {
@@ -505,6 +532,8 @@ export async function linkSelf(user, playerId) {
 
 export async function createInvite(user, playerId) {
   await settle();
+  // Backfill playerNames on owned sessions/games before sharing them.
+  await enqueue(() => pushLocal(user));
   const { db } = getServices();
   const remote = await fetchRemote(user.uid);
   const player = remote.players.get(playerId);
