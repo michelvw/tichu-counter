@@ -7,6 +7,7 @@
     <meta name="theme-color" content="#104832">
     <link rel="icon" type="image/svg+xml" href="dragon-icon.svg">
     <link rel="stylesheet" href="main.css">
+    <script src="js/gate.js"></script>
     <script src="js/theme.js"></script>
     <link rel="stylesheet" href="theme.css">
   </head>
@@ -54,6 +55,13 @@
           <p id="threshold-status" role="status" aria-live="polite"></p>
         </form>
       </section>
+      <section class="card-panel settings-section" aria-labelledby="account-heading">
+        <h5 id="account-heading">Account</h5>
+        <p id="account-status"></p>
+        <button type="button" class="btn" id="account-sign-in" hidden>Sign in with Google</button>
+        <button type="button" class="btn" id="account-sign-out" hidden>Sign out</button>
+        <p id="account-message" role="status" aria-live="polite"></p>
+      </section>
       <section class="card-panel settings-section" aria-labelledby="backup-heading">
         <h5 id="backup-heading">Backup</h5>
         <p class="helper-text">Move your data between this app and the Tichu Counter Android app.</p>
@@ -75,6 +83,8 @@
     <script src="js/storage.js"></script>
     <script src="js/players-storage.js"></script>
     <script src="js/backup.js"></script>
+    <script src="js/cloud.js"></script>
+    <script src="js/account.js"></script>
     <script src="js/settings.js"></script>
   </body>
 </html>

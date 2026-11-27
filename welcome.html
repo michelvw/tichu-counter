@@ -1,0 +1,41 @@
+<!doctype html>
+<html class="no-js" lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Welcome - Tichu Counter</title>
+    <meta name="theme-color" content="#104832">
+    <link rel="manifest" href="manifest.json">
+    <link rel="icon" type="image/svg+xml" href="dragon-icon.svg">
+    <link rel="stylesheet" href="main.css">
+    <script src="js/theme.js"></script>
+    <link rel="stylesheet" href="theme.css">
+    <script>
+      if ("serviceWorker" in navigator) {
+        window.addEventListener("load", function () {
+          navigator.serviceWorker.register("service-worker.js").catch(function (err) {
+            console.warn("Service worker registration failed:", err);
+          });
+        });
+      }
+    </script>
+  </head>
+  <body>
+    <main class="container welcome-page">
+      <img src="dragon-icon.svg" alt="" width="72" height="72">
+      <h4>Tichu Counter</h4>
+      <p class="helper-text">Keep score for Tichu, from a single game to a whole game night.</p>
+      <ul class="welcome-features">
+        <li><strong>Effortless round scoring.</strong> Auto-balancing 100-point tricks with one-tap Tichu, Grand Tichu and Double Win calls.</li>
+        <li><strong>Built for 4, 5 &amp; 6 players.</strong> Quick games or multi-game sessions with fixed teams, 5-player rotation and 3-team modes, plus dealer tracking.</li>
+        <li><strong>Leaderboards &amp; career stats.</strong> Win rates, point averages and special-call stats, plus JSON backup export/import.</li>
+        <li><strong>Sync or stay offline.</strong> Sign in with Google to back up and share live scores with friends, or start right away as a guest.</li>
+      </ul>
+      <button type="button" class="btn" id="sign-in">Sign in with Google</button>
+      <button type="button" class="btn-flat" id="continue-guest">Continue as guest</button>
+      <p id="welcome-status" role="status" aria-live="polite"></p>
+    </main>
+    <script src="js/cloud.js"></script>
+    <script src="js/welcome.js"></script>
+  </body>
+</html>

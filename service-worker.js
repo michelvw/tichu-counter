@@ -10,7 +10,7 @@
  * forgetting it is exactly the kind of stuck-on-stale-files bug the old
  * AppCache setup caused.
  */
-const CACHE_NAME = "tichu-counter-v33";
+const CACHE_NAME = "tichu-counter-v34";
 
 // Core files needed to load and run the app offline. 
 const APP_SHELL = [
@@ -33,6 +33,11 @@ const APP_SHELL = [
   "./js/storage.js",
   "./js/players-storage.js",
   "./js/backup.js",
+  "./js/gate.js",
+  "./js/welcome.js",
+  "./js/account.js",
+  "./js/cloud.js",
+  "./welcome.html",
   "./js/theme.js",
   "./js/settings.js",
   "./js/script.js",

@@ -144,5 +144,8 @@
   {
     "stage": "page-errors",
     "pageErrors": []
+  },
+  {
+    "watchdog": "elapsed"
   }
 ]

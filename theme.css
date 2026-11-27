@@ -1042,3 +1042,8 @@ nav ul a[data-label]::after {
 .table-scroll table {
   min-width: 560px;
 }
+
+.welcome-page { text-align: center; padding-top: 24px; }
+.welcome-features { text-align: left; max-width: 480px; margin: 16px auto; }
+.welcome-features li { margin-bottom: 12px; }
+.welcome-page .btn, .welcome-page .btn-flat { display: block; margin: 8px auto; }
