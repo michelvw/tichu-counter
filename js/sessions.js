@@ -21,7 +21,7 @@
 
   function playerName(id) {
     var p = TichuPlayers.getPlayer(id);
-    return p ? p.name : "(removed player)";
+    return p ? p.name : (localStorage.getItem("tichuCloudUser") ? "Other player" : "(removed player)");
   }
 
   function lineupSummary(obj) {
@@ -434,6 +434,7 @@
       $box.append('<div class="card-panel" id="readonly-banner">Live view \u2014 hosted by another player (read-only)</div>');
       $box.append($('<p class="helper-text"></p>').text(s.playerIds.map(playerName).join(" \u00b7 ")));
       if (games.length) $box.append(renderGamesList(games, null));
+      $box.append($('<a class="btn-flat"></a>').attr("href", "session-details.html?live=" + encodeURIComponent(s.id)).text("View details"));
     });
     $("#session-panel").after($box);
   }
@@ -452,13 +453,16 @@
 
   function renderDetails() {
     var $panel = $("#session-details-panel").empty();
-    var session = TichuPlayers.getActiveOrPausedSession();
+    var liveId = new URLSearchParams(window.location.search).get("live");
+    var session = liveId ? TichuPlayers.getSession(liveId) : TichuPlayers.getActiveOrPausedSession();
+    if (liveId && session && TichuPlayers.isOwn(session)) session = null;
     if (!session) {
       $panel.append('<div class="empty-state"><i class="material-icons">info</i><p>No active session.</p><a href="sessions.html" class="btn">Back to sessions</a></div>');
       return;
     }
     var games = TichuPlayers.getSessionGames(session.id);
     var stats = TichuPlayers.computeSessionStats(session.id);
+    if (!TichuPlayers.isOwn(session)) $panel.append('<div class="card-panel" id="readonly-banner">Live view \u2014 hosted by another player (read-only)</div>');
     $panel.append('<div class="page-heading"><h4>Session details</h4><p class="helper-text">' + session.playerIds.map(playerName).join(" · ") + "</p></div>");
     var $summary = $('<div class="session-summary-card"></div>');
     $summary.append($('<div><span class="stats-label">Games played</span><strong></strong></div>').find("strong").text(games.filter(function (g) { return g.winner; }).length).end());
@@ -466,7 +470,7 @@
     $panel.append($summary);
     renderPlayerSessionStats($panel, session);
     $panel.append("<h6>Game history</h6>");
-    $panel.append(games.length ? renderGamesList(games, deleteGame) : '<p class="helper-text">No completed games yet.</p>');
+    $panel.append(games.length ? renderGamesList(games, TichuPlayers.isOwn(session) ? deleteGame : null) : '<p class="helper-text">No completed games yet.</p>');
   }
 
   function renderAll() {
