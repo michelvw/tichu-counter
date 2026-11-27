@@ -231,7 +231,7 @@
 
       var $li = $('<li class="collection-item game-row"></li>');
       $li.append($("<span></span>").text(label));
-      if (g.winner && (g.rounds || []).length) {
+      if ((g.winner || !onDeleteGame) && (g.rounds || []).length) {
         $li.append($('<a class="secondary-content icon-action" title="View rounds"><i class="material-icons">chevron_right</i></a>')
           .attr("href", "round-scores.html?game=" + encodeURIComponent(g.id)));
       }

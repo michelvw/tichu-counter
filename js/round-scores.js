@@ -52,10 +52,12 @@ if (threeTeamGame) {
     teamATichu: tichuLabel(r.teamATichuMod, r.teamADoubleWin),
     teamBTichu: tichuLabel(r.teamBTichuMod, r.teamBDoubleWin),
   }));
-  roundCounterText = "Final \u2014 " + roundScores.length + " round" + (roundScores.length === 1 ? "" : "s");
+  roundCounterText = historyGame.winner
+    ? "Final \u2014 " + roundScores.length + " round" + (roundScores.length === 1 ? "" : "s")
+    : "Live \u2014 round " + (roundScores.length + 1);
   thresholdOrFinalText = historyGame.finalScores
     ? "Final: " + historyGame.finalScores.teamA + " - " + historyGame.finalScores.teamB
-    : "Finished";
+    : (historyGame.winner ? "Finished" : "Live view (read-only)");
   // Came here from a session's game list -- send "back" there instead
   // of the plain scoreboard, which wouldn't have this game loaded.
   document.getElementById("back").href = "sessions.html";
@@ -500,3 +502,17 @@ shareButton.addEventListener("click", () => {
     }
   }, "image/png");
 });
+
+// Read-only live view of another host's unfinished game: poll the cloud and reload on changes.
+(function () {
+  var g = historyGame || null;
+  var cloud = window.TichuCloud;
+  if (!g || g.winner || TichuPlayers.isOwn(g) || !localStorage.getItem('tichuCloudUser')) return;
+  setInterval(function () {
+    if (document.hidden || !cloud || !cloud.getCurrentUser()) return;
+    var before = localStorage.getItem('tichuGames');
+    cloud.sync.refresh(cloud.getCurrentUser()).then(function () {
+      if (before !== localStorage.getItem('tichuGames')) window.location.reload();
+    }).catch(function () {});
+  }, 15000);
+})();
