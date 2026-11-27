@@ -1,0 +1,18 @@
+{
+  "name": "tichu-counter",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Tichu Counter PWA. Vite only bundles the Firebase cloud module (js/cloud.js); the pages themselves are static.",
+  "scripts": {
+    "build:cloud": "vite build",
+    "dev:cloud": "vite build --watch",
+    "build": "vite build && node scripts/build-site.mjs"
+  },
+  "dependencies": {
+    "firebase": "^13.4.0"
+  },
+  "devDependencies": {
+    "vite": "^8.4.0"
+  }
+}

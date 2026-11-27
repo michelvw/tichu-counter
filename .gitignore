@@ -4,3 +4,7 @@ _site
 
 # Dependencies (tests/)
 node_modules/
+js/cloud.js
+_site/
+.env.local
+.env*.local
