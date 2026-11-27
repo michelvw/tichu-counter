@@ -3,10 +3,21 @@
   var signInButton = document.getElementById("sign-in");
   var status = document.getElementById("welcome-status");
 
+  var entering = false;
   function enter(user) {
-    localStorage.setItem("tichuGuestModeActive", "false");
-    localStorage.setItem("tichuCloudUser", user.uid);
-    window.location.replace("index.html");
+    if (entering) return;
+    entering = true;
+    status.textContent = "Syncing your data...";
+    signInButton.disabled = true;
+    cloud.sync.onSignIn(user).then(function () {
+      localStorage.setItem("tichuGuestModeActive", "false");
+      localStorage.setItem("tichuCloudUser", user.uid);
+      window.location.replace("index.html");
+    }).catch(function (error) {
+      entering = false;
+      signInButton.disabled = false;
+      status.textContent = "Could not sync your data: " + (error && error.message || error);
+    });
   }
 
   document.getElementById("continue-guest").addEventListener("click", function () {

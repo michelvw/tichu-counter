@@ -211,15 +211,15 @@
         "text": "View details",
         "ellipsized": false,
         "fullyVisible": true,
-        "clientW": 67,
-        "scrollW": 67
+        "clientW": 65,
+        "scrollW": 65
       },
       {
         "text": "End session",
         "ellipsized": false,
         "fullyVisible": true,
-        "clientW": 65,
-        "scrollW": 65
+        "clientW": 62,
+        "scrollW": 62
       }
     ]
   }

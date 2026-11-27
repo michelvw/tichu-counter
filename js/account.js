@@ -6,10 +6,6 @@
   var message = document.getElementById("account-message");
 
   function show(user) {
-    if (user) {
-      localStorage.setItem("tichuCloudUser", user.uid);
-      localStorage.setItem("tichuGuestModeActive", "false");
-    }
     statusEl.textContent = user
       ? "Signed in as " + (user.displayName || user.email || "your Google account") + "."
       : "You're using the app as a guest. Data stays on this device.";
@@ -25,24 +21,37 @@
   signInButton.addEventListener("click", function () {
     message.textContent = "";
     cloud.signInWithGoogle().then(function (user) {
-      if (user) show(user);
+      if (!user) return;
+      message.textContent = "Syncing your data...";
+      return cloud.sync.onSignIn(user).then(function () {
+        localStorage.setItem("tichuCloudUser", user.uid);
+        localStorage.setItem("tichuGuestModeActive", "false");
+        window.location.reload();
+      });
     }).catch(function (error) {
       message.textContent = "Sign-in failed: " + (error && error.message || error);
     });
   });
 
   signOutButton.addEventListener("click", function () {
-    cloud.signOut().then(function () {
-      localStorage.removeItem("tichuCloudUser");
-      localStorage.setItem("tichuGuestModeActive", "true");
-      show(null);
+    message.textContent = "Saving changes...";
+    cloud.sync.flush().then(function () {
+      if (localStorage.getItem("tichuSyncDirty") && !window.confirm("Some changes could not be saved to the cloud and will be lost. Sign out anyway?")) {
+        message.textContent = "";
+        return;
+      }
+      return cloud.signOut().then(function () {
+        cloud.sync.clearLocal();
+        localStorage.removeItem("tichuCloudUser");
+        localStorage.setItem("tichuGuestModeActive", "false");
+        window.location.replace("welcome.html");
+      });
     }).catch(function (error) {
       message.textContent = "Sign-out failed: " + (error && error.message || error);
     });
   });
 
   cloud.onAuthChange(function (user) {
-    if (!user) localStorage.removeItem("tichuCloudUser");
     show(user);
   });
 })();

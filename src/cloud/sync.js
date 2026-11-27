@@ -1,0 +1,502 @@
+import {
+  collection, deleteDoc, deleteField, doc, getDoc, getDocs, query, serverTimestamp, setDoc,
+  updateDoc, where, writeBatch,
+} from "firebase/firestore";
+import { getServices } from "./firebase.js";
+import { chooseMergeOrDiscard } from "./ui.js";
+
+const DIRTY_KEY = "tichuSyncDirty";
+const HASH_KEY = "tichuSyncRemoteHash";
+const RELOAD_KEY = "tichuSyncReloadAt";
+const MARKER_KEY = "tichuCloudUser";
+const WATCHED = new Set([
+  "tichuPlayers", "tichuSessions", "tichuGames", "tichuCurrentGameId",
+  "A_points", "B_points", "teamAName", "teamBName", "roundScores", "roundNumber",
+  "winThreshold", "chipsVisible", "tichuTheme", "tichuModeHintDismissed",
+  "tichuPlayersRankingSort", "tichuSessionRankingSort",
+]);
+// Fields written by other flows (linking); never part of the local comparison.
+const REMOTE_ONLY = new Set([
+  "createdAt", "updatedAt", "memberUids", "participantUids", "linkedUid", "linkedLabel",
+  "lastClaimCode", "lastLinkedPlayerId",
+]);
+const IMMUTABLE = {
+  players: ["ownerUid", "createdAtMs"],
+  sessions: ["ownerUid", "startedAtMs"],
+  games: ["ownerUid", "startedAtMs", "sessionId", "mode", "team0", "team1", "team2", "fixedTeam", "pool", "playerIds", "firstRestingTeam"],
+};
+const COLLECTIONS = ["players", "sessions", "games"];
+
+let applying = false;
+let version = 0;
+let pushTimer = null;
+let currentUser = null;
+let busy = Promise.resolve();
+
+const backup = () => window.TichuBackup;
+const isId = (s) => typeof s === "string" && /^[a-zA-Z0-9_-]{1,128}$/.test(s);
+const int = (n, min = 0, max = Number.MAX_SAFE_INTEGER) => Math.min(max, Math.max(min, Math.round(Number(n) || 0)));
+const text = (s, max, fallback) => {
+  const v = typeof s === "string" ? s.trim().slice(0, max) : "";
+  return v || fallback;
+};
+
+function strip(value) {
+  if (Array.isArray(value)) return value.map(strip);
+  if (value && typeof value === "object") {
+    const out = {};
+    Object.keys(value).forEach((k) => {
+      if (value[k] !== null && value[k] !== undefined) out[k] = strip(value[k]);
+    });
+    return out;
+  }
+  return value;
+}
+
+function stable(value) {
+  if (Array.isArray(value)) return value.map(stable);
+  if (value && typeof value === "object" && typeof value.toMillis !== "function") {
+    const out = {};
+    Object.keys(value).sort().forEach((k) => { out[k] = stable(value[k]); });
+    return out;
+  }
+  return value;
+}
+
+function comparable(data) {
+  const out = {};
+  Object.keys(data).forEach((k) => { if (!REMOTE_ONLY.has(k)) out[k] = data[k]; });
+  return JSON.stringify(stable(out));
+}
+
+function hashString(s) {
+  let h = 5381;
+  for (let i = 0; i < s.length; i += 1) h = ((h << 5) + h + s.charCodeAt(i)) | 0;
+  return String(h);
+}
+
+function remoteHash(remote) {
+  const parts = [];
+  if (remote.user) parts.push("user:" + comparable(remote.user));
+  COLLECTIONS.forEach((col) => {
+    remote[col].forEach((data, id) => {
+      parts.push(col + "/" + id + ":" + comparable(data) + "|" + [].concat(data.memberUids || data.participantUids || []).join(","));
+    });
+  });
+  return hashString(parts.sort().join("\n"));
+}
+
+// ---- Canonical (backup format) -> Firestore payloads ----------------------
+
+function playerPayload(p, uid) {
+  return strip({
+    ownerUid: uid,
+    name: text(p.name, 60, "Player"),
+    active: p.active !== false,
+    createdAtMs: int(p.createdAt),
+    statsResetAt: p.statsResetAt ? int(p.statsResetAt) : null,
+  });
+}
+
+function sessionPayload(s, uid) {
+  return strip({
+    ownerUid: uid,
+    status: ["active", "paused", "ended"].includes(s.status) ? s.status : "active",
+    playerIds: (s.playerIds || []).filter(isId),
+    nextPoolStart: int(s.nextPoolStart, 0, 2),
+    pauseLog: (s.pauseLog || []).map((e) => ({ pausedAt: int(e.pausedAt), resumedAt: e.resumedAt ? int(e.resumedAt) : null })),
+    startedAtMs: int(s.startedAt),
+    endedAtMs: s.endedAt ? int(s.endedAt) : null,
+  });
+}
+
+function gamePayload(g, uid, quick) {
+  const teams = g.teams || [];
+  const mode = ["quick", "fixed", "rotation", "threeTeams"].includes(g.mode) ? g.mode : "fixed";
+  const team0 = (teams[0] || []).filter(isId);
+  const team1 = (teams[1] || []).filter(isId);
+  const team2 = (teams[2] || []).filter(isId);
+  const fixedTeam = (g.fixedTeam || []).filter(isId);
+  const pool = (g.pool || []).filter(isId);
+  const fs = g.finalScores;
+  return strip({
+    ownerUid: uid,
+    sessionId: quick ? null : g.sessionId,
+    mode,
+    playerIds: [...new Set([...team0, ...team1, ...team2, ...fixedTeam, ...pool])],
+    team0, team1, team2, fixedTeam, pool,
+    firstRestingTeam: typeof g.firstRestingTeam === "number" ? int(g.firstRestingTeam, 0, 2) : null,
+    winThreshold: int(g.winThreshold || 500, 1, 100000),
+    teamAName: text(g.teamAName, 60, "Team A"),
+    teamBName: text(g.teamBName, 60, "Team B"),
+    winner: ["A", "B", "C", "tie"].includes(g.winner) ? g.winner : null,
+    pendingNextGame: !!g.pendingNextGame,
+    finalScores: fs ? { teamA: int(fs.teamA, -1e9), teamB: int(fs.teamB, -1e9), teamC: fs.teamC === null || fs.teamC === undefined ? null : int(fs.teamC, -1e9) } : null,
+    nextDealerPlayerId: isId(g.nextDealerPlayerId) ? g.nextDealerPlayerId : null,
+    startedAtMs: int(g.startedAt),
+    endedAtMs: g.endedAt ? int(g.endedAt) : null,
+    rounds: (g.rounds || []).slice(0, 500).map((r) => ({
+      roundNumber: int(r.roundNumber),
+      scores: (r.scores || []).map((n) => int(n, -1e9)),
+      activeTeams: (r.activeTeams || []).map((n) => int(n, 0, 2)),
+      tichuMods: (r.tichuMods || []).map((n) => int(n, -200, 200)),
+      doubleWins: (r.doubleWins || []).map(Boolean),
+      sittingOutPlayerId: isId(r.sittingOutPlayerId) ? r.sittingOutPlayerId : null,
+      dealerPlayerId: isId(r.dealerPlayerId) ? r.dealerPlayerId : null,
+    })),
+  });
+}
+
+function userPayload(canon, authUser, extra) {
+  const p = canon.preferences || {};
+  const sort = (v) => text(v, 40, "totalPoints");
+  return strip({
+    uid: authUser.uid,
+    displayName: (authUser.displayName || authUser.email || "").slice(0, 80),
+    themeMode: ["system", "light", "dark"].includes(p.themeMode) ? p.themeMode : "system",
+    winThreshold: int(p.winThreshold || 500, 1, 100000),
+    chipsVisible: p.chipsVisible !== false,
+    modeHintDismissed: !!p.modeHintDismissed,
+    playersRankingSort: sort(p.playersRankingSort),
+    sessionRankingSort: sort(p.sessionRankingSort),
+    quickTeamAName: text(p.quickTeamAName, 60, "Team A"),
+    quickTeamBName: text(p.quickTeamBName, 60, "Team B"),
+    currentSessionGameId: isId(p.currentSessionGameId) ? p.currentSessionGameId : null,
+    quickGameId: isId(p.quickGameId) ? p.quickGameId : null,
+    ...extra,
+  });
+}
+
+function buildDocs(canon, uid) {
+  const quickId = "q_" + uid;
+  const docs = { players: new Map(), sessions: new Map(), games: new Map() };
+  (canon.players || []).filter((p) => isId(p.id)).forEach((p) => docs.players.set(p.id, playerPayload(p, uid)));
+  (canon.sessions || []).filter((s) => isId(s.id)).forEach((s) => {
+    const payload = sessionPayload(s, uid);
+    if (payload.playerIds.length >= 4 && payload.playerIds.length <= 6) docs.sessions.set(s.id, payload);
+  });
+  let quickRemapped = false;
+  (canon.games || []).forEach((g) => {
+    const isQuick = !g.sessionId && g.mode === "quick";
+    if (isQuick) {
+      if ((g.rounds || []).length) {
+        docs.games.set(quickId, gamePayload(g, uid, true));
+        quickRemapped = true;
+      }
+      return;
+    }
+    if (isId(g.id) && docs.sessions.has(g.sessionId)) docs.games.set(g.id, gamePayload(g, uid, false));
+  });
+  const prefs = { ...canon.preferences, quickGameId: quickRemapped ? quickId : null };
+  return { docs, prefs: { ...canon, preferences: prefs } };
+}
+
+// ---- Firestore -> canonical ------------------------------------------------
+
+async function fetchRemote(uid) {
+  const { db } = getServices();
+  const byMember = (col) => getDocs(query(collection(db, col), where(col === "players" ? "memberUids" : "participantUids", "array-contains", uid)));
+  const [u, p, s, g] = await Promise.all([getDoc(doc(db, "users", uid)), byMember("players"), byMember("sessions"), byMember("games")]);
+  const toMap = (snap) => new Map(snap.docs.map((d) => [d.id, d.data()]));
+  return { user: u.exists() ? u.data() : null, players: toMap(p), sessions: toMap(s), games: toMap(g) };
+}
+
+function remoteToCanonical(remote) {
+  const u = remote.user || {};
+  const players = [];
+  remote.players.forEach((d, id) => players.push({ id, name: d.name, active: d.active !== false, createdAt: d.createdAtMs, statsResetAt: d.statsResetAt || null }));
+  const sessions = [];
+  remote.sessions.forEach((d, id) => sessions.push({
+    id, status: d.status, playerIds: d.playerIds, nextPoolStart: d.nextPoolStart || 0,
+    pauseLog: d.pauseLog || [], startedAt: d.startedAtMs, endedAt: d.endedAtMs || null,
+  }));
+  const games = [];
+  remote.games.forEach((d, id) => {
+    const fs = d.finalScores;
+    games.push({
+      id, sessionId: d.sessionId || null, mode: d.mode,
+      teams: d.mode === "threeTeams" ? [d.team0, d.team1, d.team2] : d.mode === "rotation" ? [] : [d.team0, d.team1],
+      fixedTeam: d.fixedTeam, pool: d.pool,
+      firstRestingTeam: typeof d.firstRestingTeam === "number" ? d.firstRestingTeam : null,
+      winThreshold: d.winThreshold, teamAName: d.teamAName, teamBName: d.teamBName,
+      winner: d.winner || null, pendingNextGame: !!d.pendingNextGame,
+      finalScores: fs ? { teamA: fs.teamA, teamB: fs.teamB, teamC: fs.teamC === undefined ? null : fs.teamC } : null,
+      nextDealerPlayerId: d.nextDealerPlayerId || null, startedAt: d.startedAtMs, endedAt: d.endedAtMs || null,
+      rounds: d.rounds || [],
+    });
+  });
+  return {
+    schemaVersion: 1,
+    preferences: {
+      themeMode: u.themeMode, winThreshold: u.winThreshold, chipsVisible: u.chipsVisible,
+      modeHintDismissed: u.modeHintDismissed, playersRankingSort: u.playersRankingSort,
+      sessionRankingSort: u.sessionRankingSort, currentSessionGameId: u.currentSessionGameId || null,
+      quickGameId: u.quickGameId || null, quickTeamAName: u.quickTeamAName, quickTeamBName: u.quickTeamBName,
+    },
+    players, sessions, games,
+  };
+}
+
+function applyCanonical(canon) {
+  applying = true;
+  try {
+    backup().applyImport({ kind: "backup", data: canon });
+  } finally {
+    applying = false;
+  }
+}
+
+function setSynced(remote) {
+  applying = true;
+  try {
+    localStorage.setItem(HASH_KEY, remoteHash(remote));
+    localStorage.removeItem(DIRTY_KEY);
+  } finally {
+    applying = false;
+  }
+}
+
+// ---- Push -----------------------------------------------------------------
+
+async function commit(ops) {
+  const { db } = getServices();
+  for (let i = 0; i < ops.length; i += 400) {
+    const batch = writeBatch(db);
+    ops.slice(i, i + 400).forEach((op) => op(batch, db));
+    await batch.commit();
+  }
+}
+
+// The local model has no per-game names or thresholds, so keep what the cloud has.
+function reconcile(col, payload, existing) {
+  if (col !== "games" || !existing || payload.mode === "quick") return payload;
+  const out = { ...payload, teamAName: existing.teamAName, teamBName: existing.teamBName };
+  if (existing.winner) out.winThreshold = existing.winThreshold;
+  return out;
+}
+
+async function pushLocal(user, options = {}) {
+  const uid = user.uid;
+  const remote = await fetchRemote(uid);
+  const { docs, prefs } = buildDocs(backup().exportData(), uid);
+  const removals = [];
+  const writes = [];
+
+  COLLECTIONS.forEach((col) => {
+    remote[col].forEach((data, id) => {
+      if (data.ownerUid !== uid) return;
+      const local = docs[col].get(id);
+      const recreate = local && IMMUTABLE[col].some((k) => JSON.stringify(stable(data[k] ?? null)) !== JSON.stringify(stable(local[k] ?? null)));
+      if (!local || recreate) removals.push((b, db) => b.delete(doc(db, col, id)));
+    });
+  });
+
+  COLLECTIONS.forEach((col) => {
+    docs[col].forEach((rawPayload, id) => {
+      const existing = remote[col].get(id);
+      if (existing && existing.ownerUid !== uid) return;
+      const payload = reconcile(col, rawPayload, existing);
+      const created = !existing || existing.ownerUid !== uid || IMMUTABLE[col].some((k) => JSON.stringify(stable(existing[k] ?? null)) !== JSON.stringify(stable(payload[k] ?? null)));
+      if (!created && comparable(existing) === comparable(payload)) return;
+      if (created) {
+        const extra = col === "players" ? { memberUids: [uid] } : { participantUids: [uid] };
+        writes.push((b, db) => b.set(doc(db, col, id), { ...payload, ...extra, createdAt: serverTimestamp(), updatedAt: serverTimestamp() }));
+      } else {
+        const patch = { ...payload, updatedAt: serverTimestamp() };
+        Object.keys(existing).forEach((k) => {
+          if (!REMOTE_ONLY.has(k) && !(k in payload)) patch[k] = deleteField();
+        });
+        writes.push((b, db) => b.update(doc(db, col, id), patch));
+      }
+    });
+  });
+
+  await commit(removals);
+  await commit(writes);
+
+  const { db } = getServices();
+  const userData = userPayload(prefs, user, {
+    ...(options.migrated ? { localMigratedAt: Date.now() } : {}),
+    ...(remote.user && remote.user.localMigratedAt ? { localMigratedAt: remote.user.localMigratedAt } : {}),
+  });
+  if (!remote.user) {
+    await setDoc(doc(db, "users", uid), { ...userData, createdAt: serverTimestamp(), updatedAt: serverTimestamp() });
+  } else if (comparable(remote.user) !== comparable(userData)) {
+    const patch = { ...userData, updatedAt: serverTimestamp() };
+    ["currentSessionGameId", "quickGameId"].forEach((k) => { if (!(k in userData)) patch[k] = deleteField(); });
+    await updateDoc(doc(db, "users", uid), patch);
+  }
+  setSynced(await fetchRemote(uid));
+}
+
+// ---- Pull -----------------------------------------------------------------
+
+async function pullIfChanged(user) {
+  const remote = await fetchRemote(user.uid);
+  if (!remote.user) {
+    await pushLocal(user);
+    return false;
+  }
+  if (remoteHash(remote) === localStorage.getItem(HASH_KEY)) return false;
+  applyCanonical(remoteToCanonical(remote));
+  setSynced(remote);
+  return true;
+}
+
+// ---- Guest -> cloud ---------------------------------------------------------
+
+function hasMeaningfulData(canon) {
+  return (canon.players || []).length > 0 || (canon.sessions || []).length > 0 ||
+    (canon.games || []).some((g) => (g.rounds || []).length > 0);
+}
+
+function newId() {
+  return "m" + Math.random().toString(36).slice(2, 12) + Date.now().toString(36);
+}
+
+function remapForMerge(canon) {
+  const ids = new Map();
+  const map = (id) => {
+    if (!id) return id;
+    if (!ids.has(id)) ids.set(id, newId());
+    return ids.get(id);
+  };
+  const mapAll = (list) => (list || []).map(map);
+  return {
+    ...canon,
+    players: (canon.players || []).map((p) => ({ ...p, id: map(p.id) })),
+    sessions: (canon.sessions || []).map((s) => ({ ...s, id: map(s.id), playerIds: mapAll(s.playerIds) })),
+    games: (canon.games || []).filter((g) => g.sessionId).map((g) => ({
+      ...g,
+      id: map(g.id),
+      sessionId: map(g.sessionId),
+      teams: (g.teams || []).map(mapAll),
+      fixedTeam: mapAll(g.fixedTeam),
+      pool: mapAll(g.pool),
+      nextDealerPlayerId: map(g.nextDealerPlayerId),
+      rounds: (g.rounds || []).map((r) => ({ ...r, sittingOutPlayerId: map(r.sittingOutPlayerId), dealerPlayerId: map(r.dealerPlayerId) })),
+    })),
+  };
+}
+
+async function uploadMerge(user, remote, canon) {
+  const uid = user.uid;
+  const { docs } = buildDocs(remapForMerge(canon), uid);
+  const ops = [];
+  COLLECTIONS.forEach((col) => {
+    docs[col].forEach((payload, id) => {
+      const extra = col === "players" ? { memberUids: [uid] } : { participantUids: [uid] };
+      ops.push((b, db) => b.set(doc(db, col, id), { ...payload, ...extra, createdAt: serverTimestamp(), updatedAt: serverTimestamp() }));
+    });
+  });
+  await commit(ops);
+  const quick = (canon.games || []).find((g) => !g.sessionId && g.mode === "quick" && (g.rounds || []).length);
+  if (quick && !remote.user.quickGameId) {
+    const { db } = getServices();
+    const quickId = "q_" + uid;
+    await setDoc(doc(db, "games", quickId), {
+      ...gamePayload(quick, uid, true), participantUids: [uid], createdAt: serverTimestamp(), updatedAt: serverTimestamp(),
+    });
+    await updateDoc(doc(db, "users", uid), { quickGameId: quickId, updatedAt: serverTimestamp() });
+  }
+}
+
+export async function onSignIn(user) {
+  currentUser = user;
+  const remote = await fetchRemote(user.uid);
+  const canon = backup().exportData();
+  const meaningful = hasMeaningfulData(canon);
+  if (!remote.user) {
+    await pushLocal(user, { migrated: meaningful });
+    return;
+  }
+  if (meaningful && (await chooseMergeOrDiscard()) === "merge") {
+    await uploadMerge(user, remote, canon);
+  }
+  const fresh = await fetchRemote(user.uid);
+  applyCanonical(remoteToCanonical(fresh));
+  setSynced(fresh);
+}
+
+// ---- Lifecycle ---------------------------------------------------------------
+
+function enqueue(task) {
+  busy = busy.then(task, task);
+  return busy;
+}
+
+function markDirty(key) {
+  if (applying || !WATCHED.has(key) || !localStorage.getItem(MARKER_KEY)) return;
+  Storage.prototype.setItem.call(localStorage, DIRTY_KEY, "1");
+  version += 1;
+  schedulePush();
+}
+
+function schedulePush() {
+  clearTimeout(pushTimer);
+  pushTimer = setTimeout(flush, 1500);
+}
+
+export function flush() {
+  if (!currentUser || !localStorage.getItem(DIRTY_KEY)) return Promise.resolve();
+  const user = currentUser;
+  const seen = version;
+  return enqueue(async () => {
+    try {
+      await pushLocal(user);
+      if (seen !== version) localStorage.setItem(DIRTY_KEY, "1");
+    } catch (error) {
+      console.warn("Cloud sync failed; will retry later.", error);
+    }
+  });
+}
+
+export function clearLocal() {
+  applying = true;
+  try {
+    backup().clearAll();
+    localStorage.removeItem(HASH_KEY);
+    localStorage.removeItem(DIRTY_KEY);
+  } finally {
+    applying = false;
+  }
+}
+
+function reloadOnce() {
+  const last = Number(sessionStorage.getItem(RELOAD_KEY) || 0);
+  if (Date.now() - last < 15000) return;
+  sessionStorage.setItem(RELOAD_KEY, String(Date.now()));
+  window.location.reload();
+}
+
+export function startAutoSync(onUser) {
+  const proto = Storage.prototype;
+  const set = proto.setItem;
+  const remove = proto.removeItem;
+  proto.setItem = function (key, value) {
+    set.call(this, key, value);
+    if (this === localStorage) markDirty(key);
+  };
+  proto.removeItem = function (key) {
+    remove.call(this, key);
+    if (this === localStorage) markDirty(key);
+  };
+  window.addEventListener("pagehide", () => { flush(); });
+  document.addEventListener("visibilitychange", () => { if (document.visibilityState === "hidden") flush(); });
+
+  onUser((user) => {
+    if (!user) return;
+    currentUser = user;
+    enqueue(async () => {
+      try {
+        if (localStorage.getItem(DIRTY_KEY)) {
+          await pushLocal(user);
+        } else if (await pullIfChanged(user)) {
+          reloadOnce();
+        }
+      } catch (error) {
+        console.warn("Cloud sync failed; using cached data.", error);
+      }
+    });
+  });
+}

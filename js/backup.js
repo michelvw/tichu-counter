@@ -373,6 +373,7 @@
     exportJSON: exportJSON,
     parse: parse,
     summarize: summarize,
-    applyImport: applyImport
+    applyImport: applyImport,
+    clearAll: clearAll
   };
 })(window);
